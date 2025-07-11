@@ -18,13 +18,10 @@ const corsOptions = {
   credentials: true,
 };
 
-// Apply CORS globally
 app.use(cors(corsOptions));
-
-// ✅ Handle Preflight OPTIONS requests for all routes
 app.options('*', cors(corsOptions));
 
-// ✅ Serve static files from /uploads (for event posters)
+// ✅ Serve static files from /uploads
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // ✅ MySQL session store

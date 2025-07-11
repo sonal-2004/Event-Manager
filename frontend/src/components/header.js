@@ -8,7 +8,7 @@ export default function Header({ user, setUser }) {
 
   const handleLogout = async () => {
     try {
-      await axios.post('http://localhost:5000/api/auth/logout', {}, { withCredentials: true });
+      await axios.post('/api/auth/logout', {}, { withCredentials: true });
       setUser(null);
       navigate('/login');
     } catch (err) {

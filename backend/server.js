@@ -18,8 +18,8 @@ const corsOptions = {
   credentials: true,
 };
 
-app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
+//app.use(cors(corsOptions));
+//app.options('*', cors(corsOptions));
 
 // ✅ Serve static files from /uploads
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));

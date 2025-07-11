@@ -19,7 +19,7 @@ export default function Login({ setUser }) {
     console.log('🔐 Trying login with:', email, password);
 
     try {
-      const res = await axios.post('/https://eventannouncer.onrender.com/api/auth/login', { email, password });
+      const res = await axios.post('/api/auth/login', { email, password });
       console.log('✅ Login response:', res.data);
 
       setUser(res.data.user); // Lift user state

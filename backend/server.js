@@ -22,25 +22,8 @@ if (process.env.NODE_ENV === 'production') {
 // Middleware
 app.use(express.json());
 
-// CORS configuration
-const allowedOrigins = [
-  'http://localhost:3000',
-  process.env.FRONTEND_URL,
-];
-
-app.use(cors({
-  origin: function (origin, callback) {
-    // Allow non-browser tools like Postman (no origin)
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    } else {
-      console.warn(`Blocked by CORS: ${origin}`);
-      return callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-}));
+// ✅ CORS configuration - allow ALL origins
+app.use(cors());
 
 // Session config
 app.use(session({

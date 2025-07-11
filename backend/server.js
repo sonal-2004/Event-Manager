@@ -6,25 +6,31 @@ const cors = require('cors');
 const path = require('path');
 const app = express();
 
-// ✅ Middleware: Parse JSON
 app.use(express.json());
 
-// ✅ CORS Setup for both local + deployed frontend
+// ✅ CORRECT CORS
+const allowedOrigins = [
+  'http://localhost:3000',
+  'https://eventannouncer.vercel.app'
+];
+
 const corsOptions = {
-  origin: [
-    'http://localhost:3000',
-    'https://eventannouncer.vercel.app'
-  ],
-  credentials: true,
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    } else {
+      return callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true
 };
 
-//app.use(cors(corsOptions));
-//app.options('*', cors(corsOptions));
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 
-// ✅ Serve static files from /uploads
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// ✅ MySQL session store
 const sessionStore = new MySQLStore({
   host: process.env.DB_HOST || 'localhost',
   port: process.env.DB_PORT || 3306,
@@ -33,7 +39,6 @@ const sessionStore = new MySQLStore({
   database: process.env.DB_NAME
 });
 
-// ✅ Session Middleware
 app.use(session({
   key: 'session_cookie_name',
   secret: process.env.SESSION_SECRET || 'your_secret_key',
@@ -48,7 +53,6 @@ app.use(session({
   }
 }));
 
-// ✅ ROUTES
 const authRoutes = require('./routes/auth');
 const clubAdminRoutes = require('./routes/clubAdmin');
 const studentRoutes = require('./routes/student');
@@ -59,12 +63,10 @@ app.use('/api/clubAdmin', clubAdminRoutes);
 app.use('/api/student', studentRoutes);
 app.use('/api/events', eventRoutes);
 
-// ✅ Default route
 app.get('/', (req, res) => {
   res.send('✅ Backend is live on Render with MySQL session!');
 });
 
-// ✅ Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);

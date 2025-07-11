@@ -16,6 +16,7 @@ const allowedOrigins = [
 
 const corsOptions = {
   origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl)
     if (!origin) return callback(null, true);
     if (allowedOrigins.includes(origin)) {
       return callback(null, true);
@@ -23,14 +24,19 @@ const corsOptions = {
       return callback(new Error('Not allowed by CORS'));
     }
   },
-  credentials: true
+  credentials: true,
 };
 
+// ✅ Apply CORS as the VERY FIRST middleware
 app.use(cors(corsOptions));
-// ✅ NO NEED for app.options('*', …)
 
+// ✅ Always handle preflight properly
+app.options('*', cors(corsOptions));
+
+// ✅ Serve static files from /uploads
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// ✅ MySQL session store
 const sessionStore = new MySQLStore({
   host: process.env.DB_HOST || 'localhost',
   port: process.env.DB_PORT || 3306,
@@ -65,6 +71,15 @@ app.use('/api/events', eventRoutes);
 
 app.get('/', (req, res) => {
   res.send('✅ Backend is live on Render with MySQL session!');
+});
+
+// ✅ Add a global error handler for CORS errors
+app.use((err, req, res, next) => {
+  if (err.message === 'Not allowed by CORS') {
+    res.status(403).json({ message: 'CORS Error: Origin not allowed' });
+  } else {
+    next(err);
+  }
 });
 
 const PORT = process.env.PORT || 5000;

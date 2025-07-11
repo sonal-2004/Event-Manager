@@ -27,7 +27,7 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
+// ✅ NO NEED for app.options('*', …)
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 

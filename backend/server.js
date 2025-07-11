@@ -10,11 +10,19 @@ const app = express();
 app.use(express.json());
 
 // ✅ CORS Setup for both local + deployed frontend
-app.use(cors({
-  origin: ['http://localhost:3000', 'https://eventannouncer.vercel.app'],
-  
-  credentials: true
-}));
+const corsOptions = {
+  origin: [
+    'http://localhost:3000',
+    'https://eventannouncer.vercel.app'
+  ],
+  credentials: true,
+};
+
+// Apply CORS globally
+app.use(cors(corsOptions));
+
+// ✅ Handle Preflight OPTIONS requests for all routes
+app.options('*', cors(corsOptions));
 
 // ✅ Serve static files from /uploads (for event posters)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -37,7 +45,6 @@ app.use(session({
   saveUninitialized: false,
   cookie: {
     httpOnly: true,
-    secure:true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
     maxAge: 1000 * 60 * 60 * 24,

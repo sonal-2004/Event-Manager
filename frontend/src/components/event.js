@@ -51,15 +51,25 @@ const [successMessage, setSuccessMessage] = useState('');
   };
 
   const validateForm = () => {
-    const requiredFields = ['title', 'description', 'date', 'time', 'location'];
-    for (const field of requiredFields) {
-      if (!newEvent[field] || newEvent[field].trim() === '') {
-        alert(`Please fill in the "${field}" field.`);
-        return false;
-      }
+  const requiredFields = ['title', 'description', 'date', 'time', 'location'];
+  for (const field of requiredFields) {
+    if (!newEvent[field] || newEvent[field].trim() === '') {
+      alert(`Please fill in the "${field}" field.`);
+      return false;
     }
-    return true;
-  };
+  }
+
+  // ✅ Check for past date
+  const selectedDate = new Date(`${newEvent.date}T${newEvent.time}`);
+  const now = new Date();
+  if (selectedDate < now) {
+    alert("Please select a valid future date and time.");
+    return false;
+  }
+
+  return true;
+};
+
 
  const buildFormData = () => {
   const formData = new FormData();
@@ -128,14 +138,17 @@ const [successMessage, setSuccessMessage] = useState('');
   };
 
   const handleDelete = async (id) => {
-    try {
-      await axios.delete(`/api/clubAdmin/event/${id}`);
-      fetchEvents();
-    } catch (error) {
-      console.error('Failed to delete event:', error.response?.data || error);
-      alert(error.response?.data?.message || 'Failed to delete event.');
-    }
-  };
+  try {
+    await axios.delete(`/api/clubAdmin/event/${id}`);
+    fetchEvents();
+    setSuccessMessage('Event deleted successfully.');
+    setTimeout(() => setSuccessMessage(''), 3000);
+  } catch (error) {
+    console.error('Failed to delete event:', error.response?.data?.message || error.message || error);
+    alert(error.response?.data?.message || 'Failed to delete event.');
+  }
+};
+
 
   const handleInputChange = (e) => {
     const { name, value, files } = e.target;

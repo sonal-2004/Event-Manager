@@ -20,21 +20,20 @@ router.post('/events', isClubAdmin, upload.single('poster'), async (req, res) =>
   console.log('   req.body:', req.body);
   console.log('   req.file:', req.file);
 
-  const { title, description, date, time, location } = req.body;
+  const { title, description, date, time, location, event_type, club_name } = req.body;
   const created_by = req.user.id;
-  const club_name = req.user.club_name;
   const poster = req.file?.path || null;
 
-  if (!title || !description || !date || !time || !location) {
+  if (!title || !description || !date || !time || !location || !event_type || !club_name) {
     return res.status(400).json({ message: 'Missing required fields' });
   }
 
   try {
     const [result] = await db.execute(`
       INSERT INTO events
-      (title, description, date, time, location, poster, created_by, club_name)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [title, description, date, time, location, poster, created_by, club_name]
+      (title, description, date, time, location, poster, created_by, club_name, event_type)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [title, description, date, time, location, poster, created_by, club_name, event_type]
     );
     console.log('✅ Event inserted ID:', result.insertId);
     res.json({ message: 'Event created successfully', id: result.insertId });

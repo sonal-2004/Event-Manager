@@ -1,8 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import Navbar from '../components/navbar';
-import { toast, ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
 
 axios.defaults.withCredentials = true;
 axios.defaults.baseURL = process.env.REACT_APP_API_URL;
@@ -37,34 +35,22 @@ const StudentEvents = () => {
 
   const handleRegister = async (eventId, eventTitle, isPastEvent) => {
     if (isPastEvent) {
-      toast.warning("⏳ You cannot register, the deadline has passed.", {
-        position: "top-center",
-        autoClose: 3000,
-      });
+      alert("⏳ You cannot register, the deadline has passed.");
       return;
     }
 
     try {
       await axios.post(`/api/student/register/${eventId}`);
-      toast.success(`✅ Registered successfully for "${eventTitle}"`, {
-        position: "top-center",
-        autoClose: 3000,
-      });
+      alert(`✅ Registered successfully for "${eventTitle}"`);
       fetchRegisteredEvents();
     } catch (error) {
       if (error.response?.status === 401 || error.response?.status === 403) {
         sessionStorage.setItem("registerAfterLogin", eventId);
         window.location.href = "/login";
       } else if (error.response?.status === 400) {
-        toast.info("ℹ️ You are already registered for this event.", {
-          position: "top-center",
-          autoClose: 3000,
-        });
+        alert("ℹ️ You are already registered for this event.");
       } else {
-        toast.error("❌ Registration failed.", {
-          position: "top-center",
-          autoClose: 3000,
-        });
+        alert("❌ Registration failed.");
       }
     }
   };
@@ -107,9 +93,7 @@ const StudentEvents = () => {
           handleRegister(event.id, event.title, isPastEvent);
         }}
         className={`mt-4 px-4 py-2 rounded transition text-white ${
-          isPastEvent
-            ? 'bg-gray-400 cursor-not-allowed'
-            : registeredEvents.includes(event.id)
+          isPastEvent || registeredEvents.includes(event.id)
             ? 'bg-gray-400 cursor-not-allowed'
             : 'bg-blue-600 hover:bg-red-700'
         }`}
@@ -127,10 +111,9 @@ const StudentEvents = () => {
   return (
     <div>
       <Navbar />
-      <ToastContainer />
 
-      {/* Gradient Header with Animated Stars */}
-      <div className="relative bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-20 overflow-hidden text-center">
+      {/* Gradient Header */}
+      <div className="relative bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-20 text-center overflow-hidden">
         {Array.from({ length: 25 }).map((_, index) => (
           <img
             key={index}

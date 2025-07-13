@@ -14,15 +14,10 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // ✅ CORS configuration
-const corsOptions = {
+app.use(cors({
   origin: process.env.FRONTEND_URL, // e.g., 'https://eventannouncer.vercel.app'
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-};
-
-app.use(cors(corsOptions));
-app.options('*', cors(corsOptions)); // Preflight support
+  credentials: true
+}));
 
 // ✅ Body parser
 app.use(express.json());
@@ -33,14 +28,14 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: process.env.NODE_ENV === 'production', // HTTPS only in production
+    secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
-    sameSite: 'none', // Required for cross-origin cookies
+    sameSite: 'none',
     maxAge: 1000 * 60 * 60 // 1 hour
   }
 }));
 
-// ✅ Serve static uploads (e.g., event images)
+// ✅ Serve static uploads
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // ✅ API routes
@@ -49,7 +44,7 @@ app.use('/api/clubAdmin', clubAdminRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/student', studentRoutes);
 
-// ✅ Example protected route
+// ✅ Protected example
 app.get('/api/dashboard', (req, res) => {
   if (req.session.user) {
     res.json({ message: `Welcome ${req.session.user.name}`, role: req.session.user.role });
@@ -58,12 +53,12 @@ app.get('/api/dashboard', (req, res) => {
   }
 });
 
-// ✅ Default route for base URL to remove "Cannot GET /"
+// ✅ Home route (no "Cannot GET /")
 app.get('/', (req, res) => {
   res.send('🌐 Campus Events API is running!');
 });
 
 // ✅ Start server
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
 });

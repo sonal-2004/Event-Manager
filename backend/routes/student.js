@@ -52,12 +52,13 @@ router.get('/registered', isStudent, async (req, res) => {
       [studentId]
     );
 
-    res.json(rows); // Send full event details
+    res.json(rows);
   } catch (err) {
     console.error('❌ Error in /registered route:', err);
     res.status(500).json({ message: 'Internal server error' });
   }
 });
+
 
 
 // ✅ Route: Fetch all events for students (used in StudentEvents.js)

@@ -73,29 +73,40 @@ const HomePage = () => {
       </div>
 
       {/* How It Works */}
-      <section className="pt-12 pb-12 text-center px-4">
-        <div className="max-w-5xl mx-auto">
-          <img src="/assets/calender.png" alt="Calendar Icon" className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-4" />
-          <h2 className="text-3xl sm:text-4xl font-bold text-purple-700 mb-4">How It Works</h2>
-          <p className="text-gray-600 mb-10 text-base sm:text-lg">
-            Getting involved in campus life is easy. Follow these simple steps to start your journey.
-          </p>
+    {/* How It Works */}
+<section className="pt-12 pb-12 text-center px-4">
+  <div className="max-w-5xl mx-auto">
+    <img src="/assets/calender.png" alt="Calendar Icon" className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-4" />
+    <h2 className="text-3xl sm:text-4xl font-bold text-purple-700 mb-4">How It Works</h2>
+    <p className="text-gray-600 mb-10 text-base sm:text-lg">
+      Getting involved in campus life is easy. Follow these simple steps to start your journey.
+    </p>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
-            {[
-              { icon: "📅", title: "Discover Events", desc: "Browse through a variety of events happening across campus." },
-              { icon: "👥", title: "Register for Events", desc: "Sign up and track your registrations with reminders." },
-              { icon: "⭐", title: "Explore Clubs", desc: "Learn about clubs and their upcoming activities." }
-            ].map((item, i) => (
-              <div key={i} className="bg-white border rounded-lg shadow-lg shadow-purple-300 p-6 sm:p-8 w-full max-w-xs mx-auto">
-                <div className="text-purple-600 text-3xl sm:text-4xl mb-4">{item.icon}</div>
-                <h3 className="text-lg sm:text-xl font-semibold mb-2">{item.title}</h3>
-                <p className="text-gray-600 text-sm sm:text-base">{item.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
+      {/* Discover Events */}
+      <Link to="/event" className="bg-white border rounded-lg shadow-lg shadow-purple-300 p-6 sm:p-8 w-full max-w-xs mx-auto hover:shadow-xl transition-all">
+        <div className="text-purple-600 text-3xl sm:text-4xl mb-4">📅</div>
+        <h3 className="text-lg sm:text-xl font-semibold mb-2">Discover Events</h3>
+        <p className="text-gray-600 text-sm sm:text-base">Browse through a variety of events happening across campus.</p>
+      </Link>
+
+      {/* Register for Events */}
+      <Link to="/event" className="bg-white border rounded-lg shadow-lg shadow-purple-300 p-6 sm:p-8 w-full max-w-xs mx-auto hover:shadow-xl transition-all">
+        <div className="text-purple-600 text-3xl sm:text-4xl mb-4">👥</div>
+        <h3 className="text-lg sm:text-xl font-semibold mb-2">Register for Events</h3>
+        <p className="text-gray-600 text-sm sm:text-base">Sign up and track your registrations with reminders.</p>
+      </Link>
+
+      {/* Explore Clubs */}
+      <Link to="/club" className="bg-white border rounded-lg shadow-lg shadow-purple-300 p-6 sm:p-8 w-full max-w-xs mx-auto hover:shadow-xl transition-all">
+        <div className="text-purple-600 text-3xl sm:text-4xl mb-4">⭐</div>
+        <h3 className="text-lg sm:text-xl font-semibold mb-2">Explore Clubs</h3>
+        <p className="text-gray-600 text-sm sm:text-base">Learn about clubs and their upcoming activities.</p>
+      </Link>
+    </div>
+  </div>
+</section>
+
 
       {/* Event Gallery */}
       <section className="pt-8 pb-16 bg-gray-50 px-4 sm:px-8 md:px-24">

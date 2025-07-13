@@ -1,21 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
-const path = require('path');
-const multer = require('multer');
-
-// ===== Multer Storage Config =====
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, 'uploads/'); // Make sure this folder exists
-  },
-  filename: (req, file, cb) => {
-    const uniqueName = Date.now() + path.extname(file.originalname);
-    cb(null, uniqueName);
-  },
-});
-
-const upload = multer({ storage });
+const upload = require('../middlewares/cloudinaryUpload');
 
 // ===== Middleware: Only Club Admins Allowed =====
 function isClubAdmin(req, res, next) {
@@ -33,7 +19,9 @@ router.post('/events', isClubAdmin, upload.single('poster'), async (req, res) =>
   const { title, description, date, time, location } = req.body;
   const created_by = req.user.id;
   const club_name = req.user.club_name;
-  const poster = req.file ? `/uploads/${req.file.filename}` : null;
+
+  // IMPORTANT: Cloudinary returns the URL as req.file.path
+  const poster = req.file ? req.file.path : null;
 
   if (!title || !description || !date || !time || !location) {
     return res.status(400).json({ message: 'Missing required fields' });
@@ -67,7 +55,7 @@ router.put('/event/:eventId', isClubAdmin, upload.single('poster'), async (req, 
 
   if (req.file) {
     updateFields.push('poster = ?');
-    values.push(`/uploads/${req.file.filename}`);
+    values.push(req.file.path);
   }
 
   if (updateFields.length === 0) {

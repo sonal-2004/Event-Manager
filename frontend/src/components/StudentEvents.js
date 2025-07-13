@@ -1,3 +1,4 @@
+// StudentEvents.jsx
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import Navbar from '../components/navbar';
@@ -68,9 +69,9 @@ const StudentEvents = () => {
       <div>
         {event.poster && (
           <img
-            src={`${process.env.REACT_APP_API_URL}${event.poster}`}
+            src={event.poster}
             alt="Poster"
-            className="rounded mt-2 max-h-60 w-50 object-cover mx-auto"
+            className="rounded mt-2 max-h-60 object-contain w-full mx-auto"
           />
         )}
         <h3 className="text-lg font-bold mt-2">{event.title}</h3>
@@ -112,7 +113,7 @@ const StudentEvents = () => {
     <div>
       <Navbar />
 
-      {/* Gradient Header */}
+      {/* Header */}
       <div className="relative bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-20 text-center overflow-hidden">
         {Array.from({ length: 25 }).map((_, index) => (
           <img
@@ -176,9 +177,9 @@ const StudentEvents = () => {
             </button>
             {selectedEvent.poster && (
               <img
-                src={`${process.env.REACT_APP_API_URL}${selectedEvent.poster}`}
+                src={selectedEvent.poster}
                 alt="Poster"
-                className="rounded mb-4 max-h-60 object-cover mx-auto"
+                className="rounded mb-4 max-h-60 object-contain mx-auto"
               />
             )}
             <h2 className="text-xl font-bold mb-2">{selectedEvent.title}</h2>

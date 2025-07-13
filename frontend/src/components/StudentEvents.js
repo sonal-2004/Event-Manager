@@ -5,11 +5,19 @@ import Navbar from '../components/navbar';
 axios.defaults.withCredentials = true;
 axios.defaults.baseURL = process.env.REACT_APP_API_URL;
 
+const sortOptions = {
+  none: 'All Events',
+  club_name: 'Club Name',
+  event_type: 'Event Type',
+  date: 'Date',
+  time: 'Time',
+};
+
 const StudentEvents = () => {
   const [events, setEvents] = useState([]);
   const [registeredEvents, setRegisteredEvents] = useState([]);
   const [selectedEvent, setSelectedEvent] = useState(null);
-  const [sortBy, setSortBy] = useState('None');
+  const [sortBy, setSortBy] = useState('none');
 
   useEffect(() => {
     fetchEvents();
@@ -34,6 +42,8 @@ const StudentEvents = () => {
     }
   };
 
+  const today = new Date();
+
   const handleRegister = async (eventId, eventTitle, isPastEvent) => {
     if (isPastEvent) {
       alert("⏳ You cannot register, the deadline has passed.");
@@ -56,29 +66,19 @@ const StudentEvents = () => {
     }
   };
 
-  const today = new Date();
-
-  const sortEvents = (events) => {
+  const sortEvents = (eventsList) => {
     const grouped = {};
 
-    events.forEach(event => {
+    eventsList.forEach((event) => {
       let key;
-      switch (sortBy) {
-        case 'Club Name':
-          key = event.club_name;
-          break;
-        case 'Event Type':
-          key = event.event_type;
-          break;
-        case 'Date':
-          key = new Date(event.date).toLocaleDateString();
-          break;
-        case 'Time':
-          key = event.time;
-          break;
-        default:
-          key = 'All Events';
+      if (sortBy === 'none') {
+        key = 'All Events';
+      } else if (sortBy === 'date') {
+        key = new Date(event.date).toLocaleDateString();
+      } else {
+        key = event[sortBy] || 'Unknown';
       }
+
       if (!grouped[key]) grouped[key] = [];
       grouped[key].push(event);
     });
@@ -86,49 +86,45 @@ const StudentEvents = () => {
     return grouped;
   };
 
-  const filteredEvents = events.filter(e => new Date(e.date) >= today);
-  const sortedGroups = sortEvents(filteredEvents);
+  const upcomingEvents = events.filter((e) => new Date(e.date) >= today);
+  const groupedEvents = sortEvents(upcomingEvents);
 
   const renderEventCard = (event) => (
     <div
       key={event.id}
-      className="bg-white border rounded-lg shadow-lg shadow-purple-300 p-4 w-full max-w-sm mx-auto flex flex-col justify-between cursor-pointer hover:shadow-xl transition"
+      className="bg-white border rounded-lg shadow-md p-4 w-full max-w-sm mx-auto cursor-pointer"
       onClick={() => setSelectedEvent(event)}
     >
-      <div>
-        {event.poster && (
-          <img
-            src={event.poster}
-            alt="Poster"
-            className="rounded mt-2 max-h-60 object-contain w-full mx-auto"
-          />
-        )}
-        <h3 className="text-lg font-bold mt-2">{event.title}</h3>
-        <p>
-          📅 {new Date(event.date).toLocaleDateString()} | 🕒{' '}
-          {new Date('1970-01-01T' + event.time).toLocaleTimeString([], {
-            hour: '2-digit',
-            minute: '2-digit',
-          })}
-        </p>
-        <p>📍 Location: {event.location}</p>
-        <p>🎓 Club: {event.club_name}</p>
-        <p>📂 Type: {event.event_type}</p>
-        <p className="mt-2 text-gray-700 line-clamp-3 overflow-hidden h-[4.5em]">
-          {event.description}
-        </p>
-      </div>
+      {event.poster && (
+        <img
+          src={event.poster}
+          alt="Poster"
+          className="rounded mb-2 max-h-48 object-contain w-full"
+        />
+      )}
+      <h3 className="text-xl font-bold">{event.title}</h3>
+      <p>
+        📅 {new Date(event.date).toLocaleDateString()} | 🕒{' '}
+        {new Date('1970-01-01T' + event.time).toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit',
+        })}
+      </p>
+      <p>📍 Location: {event.location}</p>
+      <p>🎓 Club: {event.club_name}</p>
+      <p>📂 Type: {event.event_type}</p>
+      <p className="text-sm text-gray-700 mt-2">{event.description?.slice(0, 100)}...</p>
       <button
         onClick={(e) => {
           e.stopPropagation();
           handleRegister(event.id, event.title, false);
         }}
-        className={`mt-4 px-4 py-2 rounded transition text-white ${
+        disabled={registeredEvents.includes(event.id)}
+        className={`mt-4 w-full py-2 rounded ${
           registeredEvents.includes(event.id)
             ? 'bg-gray-400 cursor-not-allowed'
-            : 'bg-blue-600 hover:bg-red-700'
+            : 'bg-purple-600 hover:bg-purple-700 text-white'
         }`}
-        disabled={registeredEvents.includes(event.id)}
       >
         {registeredEvents.includes(event.id) ? 'Registered' : 'Register'}
       </button>
@@ -139,6 +135,7 @@ const StudentEvents = () => {
     <div>
       <Navbar />
 
+      {/* Header */}
       <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-16 text-center">
         <h1 className="text-4xl font-extrabold">College Events Hub</h1>
         <p className="text-lg italic mt-2 text-yellow-300">
@@ -150,31 +147,31 @@ const StudentEvents = () => {
       <div className="flex justify-center my-6">
         <label className="mr-2 text-purple-700 font-semibold">Sort By:</label>
         <select
-          className="border px-3 py-1 rounded"
+          className="border px-3 py-2 rounded"
           value={sortBy}
           onChange={(e) => setSortBy(e.target.value)}
         >
-          <option value="None">None</option>
-          <option value="Club Name">Club Name</option>
-          <option value="Event Type">Event Type</option>
-          <option value="Date">Date</option>
-          <option value="Time">Time</option>
+          {Object.entries(sortOptions).map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
         </select>
       </div>
 
       {/* Grouped Events */}
       <div className="space-y-12 px-6 pb-12">
-        {Object.entries(sortedGroups).map(([group, events]) => (
+        {Object.entries(groupedEvents).map(([group, events]) => (
           <div key={group}>
             <h2 className="text-2xl font-bold text-purple-800 mb-4">{group}</h2>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {events.map(event => renderEventCard(event))}
+              {events.map((event) => renderEventCard(event))}
             </div>
           </div>
         ))}
       </div>
 
-      {/* Event Modal */}
+      {/* Modal */}
       {selectedEvent && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg max-w-2xl w-full p-6 relative overflow-y-auto max-h-[90vh]">

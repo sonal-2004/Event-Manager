@@ -5,12 +5,11 @@ const cloudinary = require('../utils/cloudinary');
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
-    folder: 'campus-events',          // your folder name on Cloudinary
+    folder: 'campus-events',
     allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
     transformation: [{ width: 800, height: 600, crop: 'limit' }],
   },
 });
 
 const upload = multer({ storage });
-
 module.exports = upload;

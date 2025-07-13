@@ -1,9 +1,19 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../db'); // Your MySQL connection
+const db = require('../db');
 
-// GET /api/events/all - Fetch all events
-// GET /api/events/filter?club_name=...&event_type=...
+// ✅ GET /api/events/all - Fetch all events
+router.get('/all', async (req, res) => {
+  try {
+    const [events] = await db.query('SELECT * FROM events ORDER BY date ASC');
+    res.json(events);
+  } catch (err) {
+    console.error('❌ Error fetching all events:', err.message);
+    res.status(500).json({ message: 'Failed to retrieve events' });
+  }
+});
+
+// ✅ GET /api/events/filter?club_name=...&event_type=...
 router.get('/filter', async (req, res) => {
   const { club_name, event_type } = req.query;
 
@@ -30,6 +40,5 @@ router.get('/filter', async (req, res) => {
     res.status(500).json({ error: 'Failed to retrieve filtered events' });
   }
 });
-
 
 module.exports = router;

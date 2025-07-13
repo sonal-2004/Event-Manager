@@ -39,20 +39,21 @@ router.post('/register/:eventId', isStudent, async (req, res) => {
 
 // Get list of registered event IDs for the logged-in student
 router.get('/registered', isStudent, async (req, res) => {
-  const studentId = req.session.user.id;
-
   try {
+    console.log('Student ID:', req.session.user?.id);
+
     const [rows] = await db.query(
       'SELECT event_id FROM registrations WHERE student_id = ?',
-      [studentId]
+      [req.session.user.id]
     );
 
+    console.log('Query result:', rows);
     const eventIds = rows.map(row => row.event_id);
 
     res.json(eventIds);
   } catch (err) {
     console.error('Error fetching registered events:', err);
-    res.status(500).json({ message: 'Internal server error' });
+    res.status(500).json({ message: err.message });
   }
 });
 

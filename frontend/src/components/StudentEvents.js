@@ -9,8 +9,7 @@ const StudentEvents = () => {
   const [events, setEvents] = useState([]);
   const [registeredEvents, setRegisteredEvents] = useState([]);
   const [selectedEvent, setSelectedEvent] = useState(null);
-  const [clubFilter, setClubFilter] = useState('All');
-  const [typeFilter, setTypeFilter] = useState('All');
+  const [sortBy, setSortBy] = useState('None');
 
   useEffect(() => {
     fetchEvents();
@@ -59,19 +58,38 @@ const StudentEvents = () => {
 
   const today = new Date();
 
-  const filteredEvents = events.filter(e => {
-    const matchesClub = clubFilter === 'All' || e.club_name === clubFilter;
-    const matchesType = typeFilter === 'All' || e.event_type === typeFilter;
-    return matchesClub && matchesType;
-  });
+  const sortEvents = (events) => {
+    const grouped = {};
 
-  const uniqueClubs = ['All', ...new Set(events.map(e => e.club_name).filter(Boolean))];
-  const uniqueTypes = ['All', ...new Set(events.map(e => e.event_type).filter(Boolean))];
+    events.forEach(event => {
+      let key;
+      switch (sortBy) {
+        case 'Club Name':
+          key = event.club_name;
+          break;
+        case 'Event Type':
+          key = event.event_type;
+          break;
+        case 'Date':
+          key = new Date(event.date).toLocaleDateString();
+          break;
+        case 'Time':
+          key = event.time;
+          break;
+        default:
+          key = 'All Events';
+      }
+      if (!grouped[key]) grouped[key] = [];
+      grouped[key].push(event);
+    });
 
-  const upcomingEvents = filteredEvents.filter(e => new Date(e.date) >= today);
-  const pastEvents = filteredEvents.filter(e => new Date(e.date) < today);
+    return grouped;
+  };
 
-  const renderEventCard = (event, isPastEvent = false) => (
+  const filteredEvents = events.filter(e => new Date(e.date) >= today);
+  const sortedGroups = sortEvents(filteredEvents);
+
+  const renderEventCard = (event) => (
     <div
       key={event.id}
       className="bg-white border rounded-lg shadow-lg shadow-purple-300 p-4 w-full max-w-sm mx-auto flex flex-col justify-between cursor-pointer hover:shadow-xl transition"
@@ -103,20 +121,16 @@ const StudentEvents = () => {
       <button
         onClick={(e) => {
           e.stopPropagation();
-          handleRegister(event.id, event.title, isPastEvent);
+          handleRegister(event.id, event.title, false);
         }}
         className={`mt-4 px-4 py-2 rounded transition text-white ${
-          isPastEvent || registeredEvents.includes(event.id)
+          registeredEvents.includes(event.id)
             ? 'bg-gray-400 cursor-not-allowed'
             : 'bg-blue-600 hover:bg-red-700'
         }`}
-        disabled={isPastEvent || registeredEvents.includes(event.id)}
+        disabled={registeredEvents.includes(event.id)}
       >
-        {isPastEvent
-          ? 'Registration Closed'
-          : registeredEvents.includes(event.id)
-          ? 'Registered'
-          : 'Register'}
+        {registeredEvents.includes(event.id) ? 'Registered' : 'Register'}
       </button>
     </div>
   );
@@ -125,88 +139,42 @@ const StudentEvents = () => {
     <div>
       <Navbar />
 
-      {/* Header */}
-      <div className="relative bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-20 text-center overflow-hidden">
-        {Array.from({ length: 25 }).map((_, index) => (
-          <img
-            key={index}
-            src="/assets/starss.png"
-            alt="Sparkle"
-            className="absolute w-4 h-4 sparkle pointer-events-none"
-            style={{
-              top: `${Math.random() * 100}%`,
-              left: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 5}s`,
-            }}
-          />
-        ))}
-        <h1 className="relative z-10 text-4xl font-extrabold mb-2">College Events Hub</h1>
-        <p className="relative z-10 text-lg italic mb-6 text-yellow-400">
+      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-16 text-center">
+        <h1 className="text-4xl font-extrabold">College Events Hub</h1>
+        <p className="text-lg italic mt-2 text-yellow-300">
           "Discover, participate, and cherish every campus moment."
         </p>
-        <div className="relative z-10 flex justify-center gap-4 flex-wrap">
-          <img src="/images/event-left.png" alt="img1" className="h-32 w-48 object-cover rounded-xl shadow-lg" />
-          <img src="/images/event-right.jpg" alt="img2" className="h-32 w-48 object-cover rounded-xl shadow-lg" />
-          <img src="/images/event-mid.jpg" alt="img3" className="h-32 w-48 object-cover rounded-xl shadow-lg" />
-        </div>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-4 justify-center my-6">
-        <div>
-          <label className="mr-2 text-purple-700 font-semibold">Filter by Club:</label>
-          <select
-            className="border px-3 py-1 rounded"
-            value={clubFilter}
-            onChange={(e) => setClubFilter(e.target.value)}
-          >
-            {uniqueClubs.map(club => (
-              <option key={club} value={club}>{club}</option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label className="mr-2 text-purple-700 font-semibold">Filter by Type:</label>
-          <select
-            className="border px-3 py-1 rounded"
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value)}
-          >
-            {uniqueTypes.map(type => (
-              <option key={type} value={type}>{type}</option>
-            ))}
-          </select>
-        </div>
+      {/* Sort Dropdown */}
+      <div className="flex justify-center my-6">
+        <label className="mr-2 text-purple-700 font-semibold">Sort By:</label>
+        <select
+          className="border px-3 py-1 rounded"
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value)}
+        >
+          <option value="None">None</option>
+          <option value="Club Name">Club Name</option>
+          <option value="Event Type">Event Type</option>
+          <option value="Date">Date</option>
+          <option value="Time">Time</option>
+        </select>
       </div>
 
-      {/* Upcoming Events */}
-      <div className="text-center my-12">
-        <img src="/assets/calender.png" alt="Calendar Icon" className="w-12 h-12 mx-auto mb-4" />
-        <h2 className="text-4xl font-bold text-purple-700">Upcoming Events</h2>
-      </div>
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-        {upcomingEvents.length > 0 ? (
-          upcomingEvents.map(event => renderEventCard(event, false))
-        ) : (
-          <p className="text-center col-span-full">No upcoming events found.</p>
-        )}
-      </div>
-
-      {/* Past Events */}
-      <div className="text-center my-12">
-        <img src="/assets/clock.png" alt="Clock Icon" className="w-12 h-12 mx-auto mb-4" />
-        <h2 className="text-4xl font-bold text-purple-700">Past Events</h2>
-      </div>
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {pastEvents.length > 0 ? (
-          pastEvents.map(event => renderEventCard(event, true))
-        ) : (
-          <p className="text-center col-span-full">No past events found.</p>
-        )}
+      {/* Grouped Events */}
+      <div className="space-y-12 px-6 pb-12">
+        {Object.entries(sortedGroups).map(([group, events]) => (
+          <div key={group}>
+            <h2 className="text-2xl font-bold text-purple-800 mb-4">{group}</h2>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {events.map(event => renderEventCard(event))}
+            </div>
+          </div>
+        ))}
       </div>
 
-      {/* Modal */}
+      {/* Event Modal */}
       {selectedEvent && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg max-w-2xl w-full p-6 relative overflow-y-auto max-h-[90vh]">
@@ -241,8 +209,7 @@ const StudentEvents = () => {
         </div>
       )}
 
-      {/* Footer */}
-      <footer className="bg-purple-800 text-white py-8 mt-6 mb-4">
+      <footer className="bg-purple-800 text-white py-8">
         <div className="max-w-6xl mx-auto px-4 text-center">
           <p>&copy; {new Date().getFullYear()} Campus Events. All rights reserved.</p>
         </div>

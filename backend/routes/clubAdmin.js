@@ -16,28 +16,34 @@ function isClubAdmin(req, res, next) {
 
 // ===== Create New Event =====
 router.post('/events', isClubAdmin, upload.single('poster'), async (req, res) => {
+  console.log('➡️ Creating event by:', req.session.user);
+  console.log('   req.body:', req.body);
+  console.log('   req.file:', req.file);
+
   const { title, description, date, time, location } = req.body;
   const created_by = req.user.id;
   const club_name = req.user.club_name;
-
-  // IMPORTANT: Cloudinary returns the URL as req.file.path
-  const poster = req.file ? req.file.path : null;
+  const poster = req.file?.path || null;
 
   if (!title || !description || !date || !time || !location) {
     return res.status(400).json({ message: 'Missing required fields' });
   }
 
   try {
-    await db.execute(
-      'INSERT INTO events (title, description, date, time, location, poster, created_by, club_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    const [result] = await db.execute(`
+      INSERT INTO events
+      (title, description, date, time, location, poster, created_by, club_name)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [title, description, date, time, location, poster, created_by, club_name]
     );
-    res.json({ message: 'Event created successfully' });
+    console.log('✅ Event inserted ID:', result.insertId);
+    res.json({ message: 'Event created successfully', id: result.insertId });
   } catch (err) {
-    console.error(err);
+    console.error('❌ DB Error /events:', err);
     res.status(500).json({ message: 'Error creating event' });
   }
 });
+
 
 // ===== Edit Event (with optional new poster) =====
 router.put('/event/:eventId', isClubAdmin, upload.single('poster'), async (req, res) => {

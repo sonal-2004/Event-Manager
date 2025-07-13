@@ -94,7 +94,7 @@ const Signup = () => {
       <option value="">Select Role</option>
       <option value="student">Student</option>
       <option value="club_admin">Club Admin</option>
-      <option value="super_admin">Super Admin</option>
+      
     </select>
 
     {form.role === 'club_admin' && (

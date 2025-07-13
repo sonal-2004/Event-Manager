@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import Navbar from '../components/navbar';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 axios.defaults.withCredentials = true;
 axios.defaults.baseURL = process.env.REACT_APP_API_URL;
-
 
 const StudentEvents = () => {
   const [events, setEvents] = useState([]);
@@ -34,28 +35,45 @@ const StudentEvents = () => {
     }
   };
 
-const handleRegister = async (eventId) => {
-  try {
-    await axios.post(`/api/student/register/${eventId}`);
-    fetchRegisteredEvents();
-  } catch (error) {
-    if (error.response?.status === 401 || error.response?.status === 403) {
-      // Save eventId in session storage for post-login registration
-      sessionStorage.setItem("registerAfterLogin", eventId);
-      window.location.href = "/login";
-    } else if (error.response?.status === 400) {
-      alert("You are already registered for this event.");
-    } else {
-      alert("Registration failed.");
+  const handleRegister = async (eventId, eventTitle, isPastEvent) => {
+    if (isPastEvent) {
+      toast.warning("⏳ You cannot register, the deadline has passed.", {
+        position: "top-center",
+        autoClose: 3000,
+      });
+      return;
     }
-  }
-};
+
+    try {
+      await axios.post(`/api/student/register/${eventId}`);
+      toast.success(`✅ Registered successfully for "${eventTitle}"`, {
+        position: "top-center",
+        autoClose: 3000,
+      });
+      fetchRegisteredEvents();
+    } catch (error) {
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        sessionStorage.setItem("registerAfterLogin", eventId);
+        window.location.href = "/login";
+      } else if (error.response?.status === 400) {
+        toast.info("ℹ️ You are already registered for this event.", {
+          position: "top-center",
+          autoClose: 3000,
+        });
+      } else {
+        toast.error("❌ Registration failed.", {
+          position: "top-center",
+          autoClose: 3000,
+        });
+      }
+    }
+  };
 
   const today = new Date();
   const upcomingEvents = events.filter(e => new Date(e.date) >= today);
   const pastEvents = events.filter(e => new Date(e.date) < today);
 
-  const renderEventCard = (event) => (
+  const renderEventCard = (event, isPastEvent = false) => (
     <div
       key={event.id}
       className="bg-white border rounded-lg shadow-lg shadow-purple-300 p-4 w-full max-w-sm mx-auto flex flex-col justify-between cursor-pointer hover:shadow-xl transition"
@@ -86,16 +104,22 @@ const handleRegister = async (eventId) => {
       <button
         onClick={(e) => {
           e.stopPropagation();
-          handleRegister(event.id);
+          handleRegister(event.id, event.title, isPastEvent);
         }}
-        className={`mt-4 px-4 py-2 rounded ${
-          registeredEvents.includes(event.id)
+        className={`mt-4 px-4 py-2 rounded transition text-white ${
+          isPastEvent
+            ? 'bg-gray-400 cursor-not-allowed'
+            : registeredEvents.includes(event.id)
             ? 'bg-gray-400 cursor-not-allowed'
             : 'bg-blue-600 hover:bg-red-700'
-        } text-white`}
-        disabled={registeredEvents.includes(event.id)}
+        }`}
+        disabled={isPastEvent || registeredEvents.includes(event.id)}
       >
-        {registeredEvents.includes(event.id) ? 'Registered' : 'Register'}
+        {isPastEvent
+          ? 'Registration Closed'
+          : registeredEvents.includes(event.id)
+          ? 'Registered'
+          : 'Register'}
       </button>
     </div>
   );
@@ -103,22 +127,23 @@ const handleRegister = async (eventId) => {
   return (
     <div>
       <Navbar />
+      <ToastContainer />
 
       {/* Gradient Header with Animated Stars */}
       <div className="relative bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-20 overflow-hidden text-center">
-         {Array.from({ length: 25 }).map((_, index) => (
-            <img
-              key={index}
-              src="/assets/starss.png"
-              alt="Sparkle"
-              className="absolute w-4 h-4 sparkle pointer-events-none"
-              style={{
-                top: `${Math.random() * 100}%`,
-                left: `${Math.random() * 100}%`,
-                animationDelay: `${Math.random() * 5}s`,
-              }}
-            />
-          ))}
+        {Array.from({ length: 25 }).map((_, index) => (
+          <img
+            key={index}
+            src="/assets/starss.png"
+            alt="Sparkle"
+            className="absolute w-4 h-4 sparkle pointer-events-none"
+            style={{
+              top: `${Math.random() * 100}%`,
+              left: `${Math.random() * 100}%`,
+              animationDelay: `${Math.random() * 5}s`,
+            }}
+          />
+        ))}
         <h1 className="relative z-10 text-4xl font-extrabold mb-2">College Events Hub</h1>
         <p className="relative z-10 text-lg italic mb-6 text-yellow-400">
           "Discover, participate, and cherish every campus moment."
@@ -137,7 +162,7 @@ const handleRegister = async (eventId) => {
       </div>
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
         {upcomingEvents.length > 0 ? (
-          upcomingEvents.map(renderEventCard)
+          upcomingEvents.map(event => renderEventCard(event, false))
         ) : (
           <p>No upcoming events.</p>
         )}
@@ -150,7 +175,7 @@ const handleRegister = async (eventId) => {
       </div>
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
         {pastEvents.length > 0 ? (
-          pastEvents.map(renderEventCard)
+          pastEvents.map(event => renderEventCard(event, true))
         ) : (
           <p>No past events.</p>
         )}
@@ -168,7 +193,7 @@ const handleRegister = async (eventId) => {
             </button>
             {selectedEvent.poster && (
               <img
-                 src={`${process.env.REACT_APP_API_URL}${selectedEvent.poster}`}
+                src={`${process.env.REACT_APP_API_URL}${selectedEvent.poster}`}
                 alt="Poster"
                 className="rounded mb-4 max-h-60 object-cover mx-auto"
               />

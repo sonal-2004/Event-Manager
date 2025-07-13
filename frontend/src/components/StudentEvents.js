@@ -113,7 +113,8 @@ const StudentEvents = () => {
           <img src={event.poster} alt="Poster" className="rounded mb-3 h-48 object-contain" />
         )}
         <h3 className="text-lg font-bold">{event.title}</h3>
-        <p>📅 {new Date(event.date).toLocaleDateString()} | 🕒 {event.time.slice(0, 5)}</p>
+        <p>📅 {new Date(event.date).toLocaleDateString()} | 🕒 {event.time?.slice(0, 5) || 'N/A'}</p>
+
         <p>📍 Location: {event.location}</p>
         <p>🎓 Club: {event.club_name}</p>
         <p>📂 Type: {event.event_type}</p>
@@ -212,7 +213,8 @@ const StudentEvents = () => {
               <img src={selectedEvent.poster} alt="Poster" className="rounded mb-4 h-60 object-contain mx-auto" />
             )}
             <h2 className="text-xl font-bold mb-2">{selectedEvent.title}</h2>
-            <p>📅 {new Date(selectedEvent.date).toLocaleDateString()} | 🕒 {selectedEvent.time.slice(0, 5)}</p>
+           <p>📅 {new Date(selectedEvent.date).toLocaleDateString()} | 🕒 {selectedEvent.time?.slice(0, 5) || 'N/A'}</p>
+
             <p>📍 Location: {selectedEvent.location}</p>
             <p>🎓 Club: {selectedEvent.club_name}</p>
             <p>📂 Type: {selectedEvent.event_type}</p>

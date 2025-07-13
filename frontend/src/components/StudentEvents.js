@@ -29,7 +29,7 @@ const StudentEvents = () => {
   const fetchRegisteredEvents = async () => {
     try {
       const res = await axios.get('/api/student/registered');
-      setRegisteredEvents(res.data); // Should be full event objects now
+      setRegisteredEvents(res.data);
     } catch (error) {
       console.error('Failed to fetch registrations:', error);
     }
@@ -52,7 +52,7 @@ const StudentEvents = () => {
           key = new Date(event.date).toLocaleDateString();
           break;
         case 'Time':
-          key = event.time;
+          key = event.time || 'Unknown Time';
           break;
         default:
           key = 'Others';
@@ -102,6 +102,12 @@ const StudentEvents = () => {
 
   const renderEventCard = (event, isPastEvent) => {
     const alreadyRegistered = isRegistered(event.id);
+    const timeFormatted = event.time
+      ? new Date(`1970-01-01T${event.time}`).toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit'
+        })
+      : 'N/A';
 
     return (
       <div
@@ -113,8 +119,7 @@ const StudentEvents = () => {
           <img src={event.poster} alt="Poster" className="rounded mb-3 h-48 object-contain" />
         )}
         <h3 className="text-lg font-bold">{event.title}</h3>
-        <p>📅 {new Date(event.date).toLocaleDateString()} | 🕒 {event.time?.slice(0, 5) || 'N/A'}</p>
-
+        <p>📅 {new Date(event.date).toLocaleDateString()} | 🕒 {timeFormatted}</p>
         <p>📍 Location: {event.location}</p>
         <p>🎓 Club: {event.club_name}</p>
         <p>📂 Type: {event.event_type}</p>
@@ -142,7 +147,7 @@ const StudentEvents = () => {
   };
 
   const renderTabs = () => (
-    <div className="flex justify-center space-x-4 my-6">
+    <div className="flex justify-center space-x-4 my-6 flex-wrap">
       {['All', 'Registered', 'Upcoming', 'Past'].map(tab => (
         <button
           key={tab}
@@ -167,7 +172,9 @@ const StudentEvents = () => {
       <div key={groupName} className="mb-10 text-center">
         <h3 className="text-xl font-semibold text-purple-600 mb-2">{groupName}</h3>
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {events.map(event => renderEventCard(event, isPastView || new Date(event.date) < today))}
+          {events.map(event =>
+            renderEventCard(event, isPastView || new Date(event.date) < today)
+          )}
         </div>
       </div>
     ));
@@ -177,11 +184,33 @@ const StudentEvents = () => {
     <div>
       <Navbar />
 
+      {/* Hero Section with Images */}
       <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-16 text-center">
         <h1 className="text-4xl font-extrabold">College Events Hub</h1>
-        <p className="text-lg italic mt-2 text-yellow-300">"Discover, participate, and cherish every campus moment."</p>
+        <p className="text-lg italic mt-2 text-yellow-300">
+          "Discover, participate, and cherish every campus moment."
+        </p>
+        {/* Images below tagline */}
+        <div className="relative z-10 flex justify-center gap-4 flex-wrap mt-6">
+          <img
+            src="/images/event-left.png"
+            alt="Event Left"
+            className="h-32 w-48 object-cover rounded-xl shadow-lg"
+          />
+          <img
+            src="/images/event-mid.jpg"
+            alt="Event Middle"
+            className="h-32 w-48 object-cover rounded-xl shadow-lg"
+          />
+          <img
+            src="/images/event-right.jpg"
+            alt="Event Right"
+            className="h-32 w-48 object-cover rounded-xl shadow-lg"
+          />
+        </div>
       </div>
 
+      {/* Sorting Dropdown */}
       <div className="flex justify-center my-4">
         <label className="mr-2 text-purple-700 font-semibold">Sort By:</label>
         <select
@@ -196,25 +225,41 @@ const StudentEvents = () => {
         </select>
       </div>
 
-      {/* Tabs */}
+      {/* Tab Filters */}
       {renderTabs()}
 
-      {/* Event Sections based on Active Tab */}
+      {/* Grouped Events View */}
       <div className="p-4 max-w-6xl mx-auto">
         {renderGroupedEvents(groupedEvents[activeTab], activeTab === 'Past')}
       </div>
 
-      {/* Event Modal */}
+      {/* Modal for Event Details */}
       {selectedEvent && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg max-w-2xl w-full p-6 relative overflow-y-auto max-h-[90vh]">
-            <button className="absolute top-2 right-2 text-gray-500 hover:text-black" onClick={() => setSelectedEvent(null)}>✕</button>
+            <button
+              className="absolute top-2 right-2 text-gray-500 hover:text-black"
+              onClick={() => setSelectedEvent(null)}
+            >
+              ✕
+            </button>
             {selectedEvent.poster && (
-              <img src={selectedEvent.poster} alt="Poster" className="rounded mb-4 h-60 object-contain mx-auto" />
+              <img
+                src={selectedEvent.poster}
+                alt="Poster"
+                className="rounded mb-4 h-60 object-contain mx-auto"
+              />
             )}
             <h2 className="text-xl font-bold mb-2">{selectedEvent.title}</h2>
-           <p>📅 {new Date(selectedEvent.date).toLocaleDateString()} | 🕒 {selectedEvent.time?.slice(0, 5) || 'N/A'}</p>
-
+            <p>
+              📅 {new Date(selectedEvent.date).toLocaleDateString()} | 🕒{' '}
+              {selectedEvent.time
+                ? new Date(`1970-01-01T${selectedEvent.time}`).toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })
+                : 'N/A'}
+            </p>
             <p>📍 Location: {selectedEvent.location}</p>
             <p>🎓 Club: {selectedEvent.club_name}</p>
             <p>📂 Type: {selectedEvent.event_type}</p>
@@ -223,6 +268,7 @@ const StudentEvents = () => {
         </div>
       )}
 
+      {/* Footer */}
       <footer className="bg-purple-800 text-white py-8 mt-6">
         <div className="max-w-6xl mx-auto px-4 text-center">
           <p>&copy; {new Date().getFullYear()} Campus Events. All rights reserved.</p>

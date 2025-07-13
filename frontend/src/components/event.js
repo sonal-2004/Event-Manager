@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import Navbar from '../components/navbar'; // Optional if you have a top navbar
+import Navbar from '../components/navbar';
 
 axios.defaults.withCredentials = true;
 axios.defaults.baseURL = process.env.REACT_APP_API_URL;
@@ -17,6 +17,8 @@ const Event = () => {
     event_type: '',
     poster: null,
   });
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [eventToEdit, setEventToEdit] = useState(null);
 
   const fetchMyEvents = async () => {
     try {
@@ -43,26 +45,60 @@ const Event = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const data = new FormData();
-    Object.entries(formData).forEach(([key, value]) => data.append(key, value));
+    Object.entries(formData).forEach(([key, value]) => {
+      if (value) data.append(key, value);
+    });
 
     try {
-      await axios.post('/api/clubAdmin/events', data);
-      alert('✅ Event created successfully!');
-      setFormData({
-        title: '',
-        description: '',
-        date: '',
-        time: '',
-        location: '',
-        club_name: '',
-        event_type: '',
-        poster: null,
-      });
+      if (isEditMode && eventToEdit) {
+        // PUT request for update
+        await axios.put(`/api/clubAdmin/event/${eventToEdit.id}`, data, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        alert('✅ Event updated successfully!');
+      } else {
+        // POST request for create
+        await axios.post('/api/clubAdmin/events', data);
+        alert('✅ Event created successfully!');
+      }
+
+      resetForm();
       fetchMyEvents();
     } catch (err) {
       console.error(err);
-      alert('❌ Failed to create event');
+      alert('❌ Failed to save event');
     }
+  };
+
+  const handleEdit = (event) => {
+    setIsEditMode(true);
+    setEventToEdit(event);
+    setFormData({
+      title: event.title || '',
+      description: event.description || '',
+      date: event.date || '',
+      time: event.time || '',
+      location: event.location || '',
+      club_name: event.club_name || '',
+      event_type: event.event_type || '',
+      poster: null, // reset poster input
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const resetForm = () => {
+    setFormData({
+      title: '',
+      description: '',
+      date: '',
+      time: '',
+      location: '',
+      club_name: '',
+      event_type: '',
+      poster: null,
+    });
+    setIsEditMode(false);
+    setEventToEdit(null);
   };
 
   const handleDelete = async (eventId) => {
@@ -83,9 +119,11 @@ const Event = () => {
 
       <h2 className="text-3xl font-extrabold text-purple-800 mb-6 text-center">📢 Manage Events</h2>
 
-      {/* Create Event Form */}
+      {/* Create or Edit Form */}
       <form onSubmit={handleSubmit} className="space-y-4 bg-white p-6 rounded shadow-md max-w-xl mx-auto mb-12">
-        <h3 className="text-xl font-semibold mb-4 text-purple-700">Create New Event</h3>
+        <h3 className="text-xl font-semibold mb-4 text-purple-700">
+          {isEditMode ? '✏️ Edit Event' : '📌 Create New Event'}
+        </h3>
         <input name="title" value={formData.title} placeholder="Title" onChange={handleChange} className="border p-2 w-full" required />
         <textarea name="description" value={formData.description} placeholder="Description" onChange={handleChange} className="border p-2 w-full" required />
         <input name="date" type="date" value={formData.date} onChange={handleChange} className="border p-2 w-full" required />
@@ -94,9 +132,17 @@ const Event = () => {
         <input name="club_name" value={formData.club_name} placeholder="Club Name" onChange={handleChange} className="border p-2 w-full" required />
         <input name="event_type" value={formData.event_type} placeholder="Event Type" onChange={handleChange} className="border p-2 w-full" required />
         <input name="poster" type="file" onChange={handleChange} className="w-full" />
-        <button type="submit" className="bg-purple-600 text-white py-2 px-4 rounded hover:bg-purple-700">
-          Create Event
-        </button>
+
+        <div className="flex gap-4">
+          <button type="submit" className="bg-purple-600 text-white py-2 px-4 rounded hover:bg-purple-700">
+            {isEditMode ? 'Update Event' : 'Create Event'}
+          </button>
+          {isEditMode && (
+            <button type="button" onClick={resetForm} className="text-gray-600 hover:text-black underline">
+              Cancel Edit
+            </button>
+          )}
+        </div>
       </form>
 
       {/* List of Events */}
@@ -113,12 +159,20 @@ const Event = () => {
               {event.poster && (
                 <img src={event.poster} alt="Poster" className="max-h-40 mt-2 rounded object-contain" />
               )}
-              <button
-                onClick={() => handleDelete(event.id)}
-                className="mt-3 text-red-600 hover:text-red-800 font-semibold"
-              >
-                Delete
-              </button>
+              <div className="mt-3 flex gap-3">
+                <button
+                  onClick={() => handleEdit(event)}
+                  className="text-yellow-600 hover:text-yellow-800 font-semibold"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => handleDelete(event.id)}
+                  className="text-red-600 hover:text-red-800 font-semibold"
+                >
+                  Delete
+                </button>
+              </div>
             </div>
           ))}
         </div>

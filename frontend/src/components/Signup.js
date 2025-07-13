@@ -37,7 +37,7 @@ const Signup = () => {
   };
 
   return (
-    <div className="flex justify-center items-center h-screen bg-gradient-to-r from-indigo-600 to-purple-600">
+    <div className="flex justify-center items-center h-80vh bg-gradient-to-r from-indigo-600 to-purple-600">
       <form
         onSubmit={handleSubmit}
         className="bg-white p-8 rounded-xl shadow-md w-full max-w-md space-y-4"

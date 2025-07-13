@@ -1,119 +1,128 @@
 import React, { useEffect, useState } from 'react';
-import Navbar from '../components/navbar';
 import axios from 'axios';
+import Navbar from '../components/navbar'; // Optional if you have a top navbar
 
 axios.defaults.withCredentials = true;
 axios.defaults.baseURL = process.env.REACT_APP_API_URL;
 
 const Event = () => {
   const [events, setEvents] = useState([]);
-  const [sortBy, setSortBy] = useState('');
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    date: '',
+    time: '',
+    location: '',
+    club_name: '',
+    event_type: '',
+    poster: null,
+  });
 
-  const fetchEvents = async () => {
+  const fetchMyEvents = async () => {
     try {
-      const res = await axios.get('/api/student/events');
+      const res = await axios.get('/api/clubAdmin/my-events');
       setEvents(res.data);
-    } catch (error) {
-      console.error('Failed to fetch events:', error);
+    } catch (err) {
+      console.error('❌ Error fetching events:', err);
     }
   };
 
   useEffect(() => {
-    fetchEvents();
+    fetchMyEvents();
   }, []);
 
-  const handleSortChange = (e) => {
-    setSortBy(e.target.value);
+  const handleChange = (e) => {
+    const { name, value, files } = e.target;
+    if (name === 'poster') {
+      setFormData((prev) => ({ ...prev, poster: files[0] }));
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
   };
 
-  const groupEvents = () => {
-    if (!sortBy) return { All: events };
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const data = new FormData();
+    Object.entries(formData).forEach(([key, value]) => data.append(key, value));
 
-    return events.reduce((acc, event) => {
-      const key = sortBy === 'date'
-        ? event.date
-        : sortBy === 'time'
-        ? event.time
-        : event[sortBy];
-
-      if (!acc[key]) acc[key] = [];
-      acc[key].push(event);
-      return acc;
-    }, {});
+    try {
+      await axios.post('/api/clubAdmin/events', data);
+      alert('✅ Event created successfully!');
+      setFormData({
+        title: '',
+        description: '',
+        date: '',
+        time: '',
+        location: '',
+        club_name: '',
+        event_type: '',
+        poster: null,
+      });
+      fetchMyEvents();
+    } catch (err) {
+      console.error(err);
+      alert('❌ Failed to create event');
+    }
   };
 
-  const groupedEvents = groupEvents();
+  const handleDelete = async (eventId) => {
+    if (!window.confirm('Are you sure you want to delete this event?')) return;
+    try {
+      await axios.delete(`/api/clubAdmin/event/${eventId}`);
+      alert('🗑️ Event deleted');
+      fetchMyEvents();
+    } catch (err) {
+      console.error(err);
+      alert('❌ Failed to delete event');
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-gray-100 font-sans">
+    <div className="p-6">
       <Navbar />
 
-      <header className="relative bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-20 overflow-hidden text-center">
-        <h1 className="text-3xl text-yellow-300 font-bold">Event Dashboard</h1>
-      </header>
+      <h2 className="text-3xl font-extrabold text-purple-800 mb-6 text-center">📢 Manage Events</h2>
 
-      <div className="p-6 max-w-6xl mx-auto">
-        {/* Sort Filter */}
-        <div className="flex justify-center gap-4 mb-8">
-          <label className="text-lg font-medium text-purple-800">Sort By:</label>
-          <select
-            value={sortBy}
-            onChange={handleSortChange}
-            className="p-2 border rounded shadow"
-          >
-            <option value="">None</option>
-            <option value="club_name">Club Name</option>
-            <option value="event_type">Event Type</option>
-            <option value="date">Date</option>
-            <option value="time">Time</option>
-          </select>
-        </div>
+      {/* Create Event Form */}
+      <form onSubmit={handleSubmit} className="space-y-4 bg-white p-6 rounded shadow-md max-w-xl mx-auto mb-12">
+        <h3 className="text-xl font-semibold mb-4 text-purple-700">Create New Event</h3>
+        <input name="title" value={formData.title} placeholder="Title" onChange={handleChange} className="border p-2 w-full" required />
+        <textarea name="description" value={formData.description} placeholder="Description" onChange={handleChange} className="border p-2 w-full" required />
+        <input name="date" type="date" value={formData.date} onChange={handleChange} className="border p-2 w-full" required />
+        <input name="time" type="time" value={formData.time} onChange={handleChange} className="border p-2 w-full" required />
+        <input name="location" value={formData.location} placeholder="Location" onChange={handleChange} className="border p-2 w-full" required />
+        <input name="club_name" value={formData.club_name} placeholder="Club Name" onChange={handleChange} className="border p-2 w-full" required />
+        <input name="event_type" value={formData.event_type} placeholder="Event Type" onChange={handleChange} className="border p-2 w-full" required />
+        <input name="poster" type="file" onChange={handleChange} className="w-full" />
+        <button type="submit" className="bg-purple-600 text-white py-2 px-4 rounded hover:bg-purple-700">
+          Create Event
+        </button>
+      </form>
 
-        {/* Grouped Events */}
-        {Object.entries(groupedEvents).map(([group, items]) => (
-          <div key={group} className="mb-10">
-            <h2 className="text-2xl font-bold text-purple-700 mb-4 border-b pb-2">
-              {group}
-            </h2>
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {items.map((event) => (
-                <div
-                  key={event.id}
-                  className="bg-white shadow-md rounded-lg p-4 hover:scale-[1.02] transition transform"
-                >
-                  <h3 className="text-xl font-bold mb-2">{event.title}</h3>
-                  <p className="text-gray-600 mb-2">
-                    {event.description.length > 100
-                      ? `${event.description.slice(0, 100)}...`
-                      : event.description}
-                  </p>
-                  <p>
-                    📅 {new Date(event.date).toLocaleDateString()} | 🕒{' '}
-                    {new Date('1970-01-01T' + event.time).toLocaleTimeString([], {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                  </p>
-                  <p className="text-sm text-gray-500">📍 {event.location}</p>
-                  {event.poster && (
-                    <img
-                      src={event.poster}
-                      alt="Poster"
-                      className="rounded mt-2 max-h-40 object-contain w-full"
-                    />
-                  )}
-                </div>
-              ))}
+      {/* List of Events */}
+      <div className="max-w-6xl mx-auto">
+        <h3 className="text-2xl font-bold text-purple-800 mb-4">📋 Your Events</h3>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {events.map((event) => (
+            <div key={event.id} className="bg-white p-4 rounded shadow-md">
+              <h4 className="font-semibold text-lg">{event.title}</h4>
+              <p className="text-sm text-gray-600">{event.description}</p>
+              <p className="text-sm">📅 {event.date} | 🕒 {event.time}</p>
+              <p className="text-sm">📍 {event.location}</p>
+              <p className="text-sm">🎓 {event.club_name} | 📂 {event.event_type}</p>
+              {event.poster && (
+                <img src={event.poster} alt="Poster" className="max-h-40 mt-2 rounded object-contain" />
+              )}
+              <button
+                onClick={() => handleDelete(event.id)}
+                className="mt-3 text-red-600 hover:text-red-800 font-semibold"
+              >
+                Delete
+              </button>
             </div>
-          </div>
-        ))}
-      </div>
-
-      <footer className="bg-purple-800 text-white py-8">
-        <div className="max-w-6xl mx-auto px-4 text-center">
-          <p>&copy; {new Date().getFullYear()} Campus Events. All rights reserved.</p>
+          ))}
         </div>
-      </footer>
+      </div>
     </div>
   );
 };

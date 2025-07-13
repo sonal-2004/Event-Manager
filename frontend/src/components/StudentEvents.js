@@ -10,6 +10,7 @@ const StudentEvents = () => {
   const [registeredEvents, setRegisteredEvents] = useState([]);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [sortBy, setSortBy] = useState('Club Name');
+  const [activeTab, setActiveTab] = useState('All');
 
   useEffect(() => {
     fetchEvents();
@@ -28,7 +29,7 @@ const StudentEvents = () => {
   const fetchRegisteredEvents = async () => {
     try {
       const res = await axios.get('/api/student/registered');
-      setRegisteredEvents(res.data); // Now it's a list of event objects
+      setRegisteredEvents(res.data); // Should be full event objects now
     } catch (error) {
       console.error('Failed to fetch registrations:', error);
     }
@@ -38,7 +39,6 @@ const StudentEvents = () => {
 
   const groupEvents = (eventList) => {
     const grouped = {};
-
     eventList.forEach(event => {
       let key;
       switch (sortBy) {
@@ -71,8 +71,12 @@ const StudentEvents = () => {
   const upcomingEvents = events.filter(e => new Date(e.date) >= today);
   const pastEvents = events.filter(e => new Date(e.date) < today);
 
-  const groupedUpcoming = groupEvents(upcomingEvents);
-  const groupedPast = groupEvents(pastEvents);
+  const groupedEvents = {
+    All: groupEvents(events),
+    Registered: groupEvents(registeredEvents),
+    Upcoming: groupEvents(upcomingEvents),
+    Past: groupEvents(pastEvents)
+  };
 
   const handleRegister = async (eventId, eventTitle, isPastEvent) => {
     if (isPastEvent) {
@@ -136,6 +140,38 @@ const StudentEvents = () => {
     );
   };
 
+  const renderTabs = () => (
+    <div className="flex justify-center space-x-4 my-6">
+      {['All', 'Registered', 'Upcoming', 'Past'].map(tab => (
+        <button
+          key={tab}
+          className={`px-4 py-2 rounded font-semibold border ${
+            activeTab === tab
+              ? 'bg-purple-600 text-white'
+              : 'bg-white text-purple-700 border-purple-600'
+          }`}
+          onClick={() => setActiveTab(tab)}
+        >
+          {tab}
+        </button>
+      ))}
+    </div>
+  );
+
+  const renderGroupedEvents = (groupedData, isPastView = false) => {
+    const entries = Object.entries(groupedData);
+    if (entries.length === 0) return <p className="text-center">No events to display.</p>;
+
+    return entries.map(([groupName, events]) => (
+      <div key={groupName} className="mb-10 text-center">
+        <h3 className="text-xl font-semibold text-purple-600 mb-2">{groupName}</h3>
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {events.map(event => renderEventCard(event, isPastView || new Date(event.date) < today))}
+        </div>
+      </div>
+    ));
+  };
+
   return (
     <div>
       <Navbar />
@@ -145,7 +181,7 @@ const StudentEvents = () => {
         <p className="text-lg italic mt-2 text-yellow-300">"Discover, participate, and cherish every campus moment."</p>
       </div>
 
-      <div className="flex justify-center my-6">
+      <div className="flex justify-center my-4">
         <label className="mr-2 text-purple-700 font-semibold">Sort By:</label>
         <select
           className="border px-3 py-1 rounded"
@@ -159,41 +195,15 @@ const StudentEvents = () => {
         </select>
       </div>
 
-      {/* UPCOMING EVENTS */}
-      <div className="text-center my-8">
-        <h2 className="text-3xl font-bold text-purple-700 mb-4">Upcoming Events</h2>
-        {Object.entries(groupedUpcoming).length === 0 ? (
-          <p>No upcoming events found.</p>
-        ) : (
-          Object.entries(groupedUpcoming).map(([groupName, events]) => (
-            <div key={groupName} className="mb-10">
-              <h3 className="text-xl font-semibold text-purple-600 mb-2">{groupName}</h3>
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {events.map(event => renderEventCard(event, false))}
-              </div>
-            </div>
-          ))
-        )}
+      {/* Tabs */}
+      {renderTabs()}
+
+      {/* Event Sections based on Active Tab */}
+      <div className="p-4 max-w-6xl mx-auto">
+        {renderGroupedEvents(groupedEvents[activeTab], activeTab === 'Past')}
       </div>
 
-      {/* PAST EVENTS */}
-      <div className="text-center my-8">
-        <h2 className="text-3xl font-bold text-purple-700 mb-4">Past Events</h2>
-        {Object.entries(groupedPast).length === 0 ? (
-          <p>No past events found.</p>
-        ) : (
-          Object.entries(groupedPast).map(([groupName, events]) => (
-            <div key={groupName} className="mb-10">
-              <h3 className="text-xl font-semibold text-purple-600 mb-2">{groupName}</h3>
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {events.map(event => renderEventCard(event, true))}
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-
-      {/* EVENT MODAL */}
+      {/* Event Modal */}
       {selectedEvent && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg max-w-2xl w-full p-6 relative overflow-y-auto max-h-[90vh]">

@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 
-// Middleware to check if student is logged in
+// ✅ Middleware: Check if the user is logged in as a student
 const isStudent = (req, res, next) => {
   if (!req.session.user || req.session.user.role !== 'student') {
     return res.status(401).json({ message: 'You must log in as a student' });
@@ -10,13 +10,12 @@ const isStudent = (req, res, next) => {
   next();
 };
 
-// Register for an event
+// ✅ Route: Register for an event
 router.post('/register/:eventId', isStudent, async (req, res) => {
   const studentId = req.session.user.id;
   const eventId = req.params.eventId;
 
   try {
-    // ✅ corrected table name
     const [existing] = await db.query(
       'SELECT * FROM student_registrations WHERE student_id = ? AND event_id = ?',
       [studentId, eventId]
@@ -33,28 +32,36 @@ router.post('/register/:eventId', isStudent, async (req, res) => {
 
     res.status(200).json({ message: 'Registered successfully' });
   } catch (err) {
-    console.error('Error in register route:', err);
+    console.error('❌ Error in register route:', err);
     res.status(500).json({ message: 'Internal server error' });
   }
 });
 
-// Get list of registered event IDs for the logged-in student
+// ✅ Route: Get event IDs the student is registered for
 router.get('/registered', isStudent, async (req, res) => {
   try {
-    console.log('SESSION:', req.session);
-    console.log('Student ID:', req.session.user?.id);
-
-    // ✅ corrected table name
+    const studentId = req.session.user.id;
     const [rows] = await db.query(
       'SELECT event_id FROM student_registrations WHERE student_id = ?',
-      [req.session.user?.id]
+      [studentId]
     );
 
-    console.log('Query result:', rows);
-    res.json(rows.map(r => r.event_id));
+    const eventIds = rows.map(row => row.event_id);
+    res.json(eventIds);
   } catch (err) {
-    console.error('ERROR:', err);
-    res.status(500).json({ message: err.message });
+    console.error('❌ Error in /registered route:', err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// ✅ Route: Fetch all events for students (used in StudentEvents.js)
+router.get('/all', isStudent, async (req, res) => {
+  try {
+    const [events] = await db.query('SELECT * FROM events ORDER BY date ASC');
+    res.json(events);
+  } catch (err) {
+    console.error('❌ Error fetching all events:', err.message);
+    res.status(500).json({ message: 'Failed to retrieve events' });
   }
 });
 

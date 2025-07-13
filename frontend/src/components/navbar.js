@@ -68,42 +68,40 @@ const Navbar = () => {
       </div>
 
       {/* Mobile menu panel */}
-      <div
-        className={`md:hidden bg-gradient-to-r from-indigo-600 to-purple-600 px-4 transition-max-height duration-300 overflow-hidden ${
-          mobileMenuOpen ? 'max-h-screen py-2' : 'max-h-0'
-        }`}
-      >
-        <div className="flex flex-col space-y-4">
-          <Link
-            to="/"
-            className="text-white hover:text-indigo-200 font-medium"
-            onClick={closeMobileMenu}
-          >
-            Home
-          </Link>
-          <Link
-            to="/event"
-            className="text-white hover:text-indigo-200 font-medium"
-            onClick={closeMobileMenu}
-          >
-            Events
-          </Link>
-          <Link
-            to="/club"
-            className="text-white hover:text-indigo-200 font-medium"
-            onClick={closeMobileMenu}
-          >
-            Clubs
-          </Link>
-          <Link
-            to="/login"
-            className="text-white hover:text-indigo-200 font-medium"
-            onClick={closeMobileMenu}
-          >
-            Login
-          </Link>
+      {mobileMenuOpen && (
+        <div className="md:hidden bg-gradient-to-r from-indigo-600 to-purple-600 px-4 py-4">
+          <div className="flex flex-col space-y-4">
+            <Link
+              to="/"
+              className="text-white hover:text-indigo-200 font-medium"
+              onClick={closeMobileMenu}
+            >
+              Home
+            </Link>
+            <Link
+              to="/event"
+              className="text-white hover:text-indigo-200 font-medium"
+              onClick={closeMobileMenu}
+            >
+              Events
+            </Link>
+            <Link
+              to="/club"
+              className="text-white hover:text-indigo-200 font-medium"
+              onClick={closeMobileMenu}
+            >
+              Clubs
+            </Link>
+            <Link
+              to="/login"
+              className="text-white hover:text-indigo-200 font-medium"
+              onClick={closeMobileMenu}
+            >
+              Login
+            </Link>
+          </div>
         </div>
-      </div>
+      )}
     </nav>
   );
 };

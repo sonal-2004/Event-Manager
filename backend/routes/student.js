@@ -16,8 +16,9 @@ router.post('/register/:eventId', isStudent, async (req, res) => {
   const eventId = req.params.eventId;
 
   try {
+    // ✅ corrected table name
     const [existing] = await db.query(
-      'SELECT * FROM registrations WHERE student_id = ? AND event_id = ?',
+      'SELECT * FROM student_registrations WHERE student_id = ? AND event_id = ?',
       [studentId, eventId]
     );
 
@@ -26,7 +27,7 @@ router.post('/register/:eventId', isStudent, async (req, res) => {
     }
 
     await db.query(
-      'INSERT INTO registrations (student_id, event_id) VALUES (?, ?)',
+      'INSERT INTO student_registrations (student_id, event_id) VALUES (?, ?)',
       [studentId, eventId]
     );
 
@@ -43,8 +44,9 @@ router.get('/registered', isStudent, async (req, res) => {
     console.log('SESSION:', req.session);
     console.log('Student ID:', req.session.user?.id);
 
+    // ✅ corrected table name
     const [rows] = await db.query(
-      'SELECT event_id FROM registrations WHERE student_id = ?',
+      'SELECT event_id FROM student_registrations WHERE student_id = ?',
       [req.session.user?.id]
     );
 

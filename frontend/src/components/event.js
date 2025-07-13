@@ -290,7 +290,7 @@ const EventDashboard = () => {
 
               {event.poster && (
                 <img
-                  src={`${process.env.REACT_APP_API_URL}${event.poster}`}
+                  src={event.poster}
                   alt="Poster"
                   className="rounded mt-2 max-h-40 w-full object-cover"
                 />

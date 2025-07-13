@@ -40,19 +40,18 @@ router.post('/register/:eventId', isStudent, async (req, res) => {
 // Get list of registered event IDs for the logged-in student
 router.get('/registered', isStudent, async (req, res) => {
   try {
+    console.log('SESSION:', req.session);
     console.log('Student ID:', req.session.user?.id);
 
     const [rows] = await db.query(
       'SELECT event_id FROM registrations WHERE student_id = ?',
-      [req.session.user.id]
+      [req.session.user?.id]
     );
 
     console.log('Query result:', rows);
-    const eventIds = rows.map(row => row.event_id);
-
-    res.json(eventIds);
+    res.json(rows.map(r => r.event_id));
   } catch (err) {
-    console.error('Error fetching registered events:', err);
+    console.error('ERROR:', err);
     res.status(500).json({ message: err.message });
   }
 });

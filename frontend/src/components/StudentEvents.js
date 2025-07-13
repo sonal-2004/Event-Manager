@@ -34,25 +34,22 @@ const StudentEvents = () => {
     }
   };
 
-  const handleRegister = async (eventId) => {
-    try {
-      await axios.post(`/api/student/register/${eventId}`);
-      fetchRegisteredEvents();
-    } catch (error) {
-      if (error.response) {
-        if (error.response.status === 401 || error.response.status === 403) {
-          alert('You must log in to register.');
-        } else if (error.response.status === 400) {
-          alert('You are already registered for this event.');
-        } else {
-          alert('Registration failed.');
-        }
-      } else {
-        console.error('Failed to register:', error);
-        alert('Something went wrong.');
-      }
+const handleRegister = async (eventId) => {
+  try {
+    await axios.post(`/api/student/register/${eventId}`);
+    fetchRegisteredEvents();
+  } catch (error) {
+    if (error.response?.status === 401 || error.response?.status === 403) {
+      // Save eventId in session storage for post-login registration
+      sessionStorage.setItem("registerAfterLogin", eventId);
+      window.location.href = "/login";
+    } else if (error.response?.status === 400) {
+      alert("You are already registered for this event.");
+    } else {
+      alert("Registration failed.");
     }
-  };
+  }
+};
 
   const today = new Date();
   const upcomingEvents = events.filter(e => new Date(e.date) >= today);

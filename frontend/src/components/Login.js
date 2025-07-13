@@ -13,23 +13,39 @@ export default function Login({ setUser }) {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setError('');
-    console.log('🔐 Trying login with:', email, password);
+ const handleLogin = async (e) => {
+  e.preventDefault();
+  setError('');
 
-    try {
-      const res = await axios.post('/api/auth/login', { email, password });
-      console.log('✅ Login response:', res.data);
+  try {
+    const res = await axios.post('/api/auth/login', { email, password });
 
-      setUser(res.data.user); // Lift user state
-      alert(res.data.message);
-      navigate('/'); // Redirect to dashboard/home
-    } catch (err) {
-      console.error('❌ Login error:', err);
-      setError(err.response?.data?.message || 'Login failed. Server error.');
+    setUser(res.data.user);
+    alert(res.data.message);
+
+    // ⏩ Check if there is an event to register after login
+    const eventIdToRegister = sessionStorage.getItem('registerAfterLogin');
+
+    if (eventIdToRegister && res.data.user.role === 'student') {
+      try {
+        await axios.post(`/api/student/register/${eventIdToRegister}`);
+        alert("Registered successfully for the event after login.");
+      } catch (err) {
+        console.error("Auto-registration failed:", err);
+        alert("Login successful, but event registration failed.");
+      }
+      sessionStorage.removeItem('registerAfterLogin');
+      return navigate('/event');
     }
-  };
+
+    // No post-login event registration needed
+    navigate('/');
+  } catch (err) {
+    console.error('❌ Login error:', err);
+    setError(err.response?.data?.message || 'Login failed. Server error.');
+  }
+};
+
 
   return (
     <div className="flex justify-center items-center h-screen bg-gradient-to-r from-indigo-600 to-purple-600">

@@ -29,6 +29,7 @@ const StudentEvents = () => {
   const fetchRegisteredEvents = async () => {
     try {
       const res = await axios.get('/api/student/registered');
+      console.log('✅ Registered Events Response:', res.data);
       setRegisteredEvents(res.data);
     } catch (error) {
       console.error('Failed to fetch registrations:', error);
@@ -43,16 +44,16 @@ const StudentEvents = () => {
       let key;
       switch (sortBy) {
         case 'Club Name':
-          key = event.club_name || 'Unknown Club';
+          key = event?.club_name?.trim() || 'Other Clubs';
           break;
         case 'Event Type':
-          key = event.event_type || 'Unknown Type';
+          key = event?.event_type?.trim() || 'Other Types';
           break;
         case 'Date':
-          key = new Date(event.date).toLocaleDateString();
+          key = event?.date ? new Date(event.date).toLocaleDateString() : 'No Date';
           break;
         case 'Time':
-          key = event.time || 'Unknown Time';
+          key = event?.time || 'No Time';
           break;
         default:
           key = 'Others';
@@ -61,12 +62,11 @@ const StudentEvents = () => {
       if (!grouped[key]) grouped[key] = [];
       grouped[key].push(event);
     });
-
     return grouped;
   };
 
   const isRegistered = (eventId) =>
-    registeredEvents.some((event) => event.id === eventId);
+    registeredEvents.some((event) => event?.id === eventId);
 
   const upcomingEvents = events.filter(e => new Date(e.date) >= today);
   const pastEvents = events.filter(e => new Date(e.date) < today);
@@ -101,8 +101,13 @@ const StudentEvents = () => {
   };
 
   const renderEventCard = (event, isPastEvent) => {
-    const alreadyRegistered = isRegistered(event.id);
-    const timeFormatted = event.time
+    const alreadyRegistered = isRegistered(event?.id);
+
+    const dateFormatted = event?.date
+      ? new Date(event.date).toLocaleDateString()
+      : 'Invalid Date';
+
+    const timeFormatted = event?.time
       ? new Date(`1970-01-01T${event.time}`).toLocaleTimeString([], {
           hour: '2-digit',
           minute: '2-digit'
@@ -111,23 +116,23 @@ const StudentEvents = () => {
 
     return (
       <div
-        key={event.id}
+        key={event?.id}
         className="bg-white border rounded-lg shadow-lg p-4 w-full max-w-sm mx-auto flex flex-col justify-between hover:shadow-xl transition"
         onClick={() => setSelectedEvent(event)}
       >
-        {event.poster && (
+        {event?.poster && (
           <img src={event.poster} alt="Poster" className="rounded mb-3 h-48 object-contain" />
         )}
-        <h3 className="text-lg font-bold">{event.title}</h3>
-        <p>📅 {new Date(event.date).toLocaleDateString()} | 🕒 {timeFormatted}</p>
-        <p>📍 Location: {event.location}</p>
-        <p>🎓 Club: {event.club_name}</p>
-        <p>📂 Type: {event.event_type}</p>
-        <p className="text-gray-700 line-clamp-3 mt-2">{event.description}</p>
+        <h3 className="text-lg font-bold">{event?.title || 'Untitled Event'}</h3>
+        <p>📅 {dateFormatted} | 🕒 {timeFormatted}</p>
+        <p>📍 Location: {event?.location || 'N/A'}</p>
+        <p>🎓 Club: {event?.club_name || 'N/A'}</p>
+        <p>📂 Type: {event?.event_type || 'N/A'}</p>
+        <p className="text-gray-700 line-clamp-3 mt-2">{event?.description || 'No description.'}</p>
         <button
           onClick={(e) => {
             e.stopPropagation();
-            handleRegister(event.id, event.title, isPastEvent);
+            handleRegister(event?.id, event?.title, isPastEvent);
           }}
           className={`mt-4 px-4 py-2 rounded text-white ${
             isPastEvent || alreadyRegistered
@@ -173,7 +178,7 @@ const StudentEvents = () => {
         <h3 className="text-xl font-semibold text-purple-600 mb-2">{groupName}</h3>
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
           {events.map(event =>
-            renderEventCard(event, isPastView || new Date(event.date) < today)
+            renderEventCard(event, isPastView || new Date(event?.date) < today)
           )}
         </div>
       </div>
@@ -190,23 +195,10 @@ const StudentEvents = () => {
         <p className="text-lg italic mt-2 text-yellow-300">
           "Discover, participate, and cherish every campus moment."
         </p>
-        {/* Images below tagline */}
         <div className="relative z-10 flex justify-center gap-4 flex-wrap mt-6">
-          <img
-            src="/images/event-left.png"
-            alt="Event Left"
-            className="h-32 w-48 object-cover rounded-xl shadow-lg"
-          />
-          <img
-            src="/images/event-mid.jpg"
-            alt="Event Middle"
-            className="h-32 w-48 object-cover rounded-xl shadow-lg"
-          />
-          <img
-            src="/images/event-right.jpg"
-            alt="Event Right"
-            className="h-32 w-48 object-cover rounded-xl shadow-lg"
-          />
+          <img src="/images/event-left.png" alt="Event Left" className="h-32 w-48 object-cover rounded-xl shadow-lg" />
+          <img src="/images/event-mid.jpg" alt="Event Middle" className="h-32 w-48 object-cover rounded-xl shadow-lg" />
+          <img src="/images/event-right.jpg" alt="Event Right" className="h-32 w-48 object-cover rounded-xl shadow-lg" />
         </div>
       </div>
 
@@ -233,7 +225,7 @@ const StudentEvents = () => {
         {renderGroupedEvents(groupedEvents[activeTab], activeTab === 'Past')}
       </div>
 
-      {/* Modal for Event Details */}
+      {/* Modal */}
       {selectedEvent && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg max-w-2xl w-full p-6 relative overflow-y-auto max-h-[90vh]">
@@ -250,9 +242,9 @@ const StudentEvents = () => {
                 className="rounded mb-4 h-60 object-contain mx-auto"
               />
             )}
-            <h2 className="text-xl font-bold mb-2">{selectedEvent.title}</h2>
+            <h2 className="text-xl font-bold mb-2">{selectedEvent.title || 'Untitled Event'}</h2>
             <p>
-              📅 {new Date(selectedEvent.date).toLocaleDateString()} | 🕒{' '}
+              📅 {selectedEvent.date ? new Date(selectedEvent.date).toLocaleDateString() : 'N/A'} | 🕒{' '}
               {selectedEvent.time
                 ? new Date(`1970-01-01T${selectedEvent.time}`).toLocaleTimeString([], {
                     hour: '2-digit',
@@ -260,15 +252,14 @@ const StudentEvents = () => {
                   })
                 : 'N/A'}
             </p>
-            <p>📍 Location: {selectedEvent.location}</p>
-            <p>🎓 Club: {selectedEvent.club_name}</p>
-            <p>📂 Type: {selectedEvent.event_type}</p>
-            <p className="mt-3 text-gray-700 whitespace-pre-wrap">{selectedEvent.description}</p>
+            <p>📍 Location: {selectedEvent.location || 'N/A'}</p>
+            <p>🎓 Club: {selectedEvent.club_name || 'N/A'}</p>
+            <p>📂 Type: {selectedEvent.event_type || 'N/A'}</p>
+            <p className="mt-3 text-gray-700 whitespace-pre-wrap">{selectedEvent.description || 'No description.'}</p>
           </div>
         </div>
       )}
 
-      {/* Footer */}
       <footer className="bg-purple-800 text-white py-8 mt-6">
         <div className="max-w-6xl mx-auto px-4 text-center">
           <p>&copy; {new Date().getFullYear()} Campus Events. All rights reserved.</p>

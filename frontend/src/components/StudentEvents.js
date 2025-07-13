@@ -28,7 +28,7 @@ const StudentEvents = () => {
   const fetchRegisteredEvents = async () => {
     try {
       const res = await axios.get('/api/student/registered');
-      setRegisteredEvents(res.data);
+      setRegisteredEvents(res.data); // Now it's a list of event objects
     } catch (error) {
       console.error('Failed to fetch registrations:', error);
     }
@@ -65,6 +65,9 @@ const StudentEvents = () => {
     return grouped;
   };
 
+  const isRegistered = (eventId) =>
+    registeredEvents.some((event) => event.id === eventId);
+
   const upcomingEvents = events.filter(e => new Date(e.date) >= today);
   const pastEvents = events.filter(e => new Date(e.date) < today);
 
@@ -93,41 +96,45 @@ const StudentEvents = () => {
     }
   };
 
-  const renderEventCard = (event, isPastEvent) => (
-    <div
-      key={event.id}
-      className="bg-white border rounded-lg shadow-lg p-4 w-full max-w-sm mx-auto flex flex-col justify-between hover:shadow-xl transition"
-      onClick={() => setSelectedEvent(event)}
-    >
-      {event.poster && (
-        <img src={event.poster} alt="Poster" className="rounded mb-3 h-48 object-contain" />
-      )}
-      <h3 className="text-lg font-bold">{event.title}</h3>
-      <p>📅 {new Date(event.date).toLocaleDateString()} | 🕒 {event.time.slice(0, 5)}</p>
-      <p>📍 Location: {event.location}</p>
-      <p>🎓 Club: {event.club_name}</p>
-      <p>📂 Type: {event.event_type}</p>
-      <p className="text-gray-700 line-clamp-3 mt-2">{event.description}</p>
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          handleRegister(event.id, event.title, isPastEvent);
-        }}
-        className={`mt-4 px-4 py-2 rounded text-white ${
-          isPastEvent || registeredEvents.includes(event.id)
-            ? 'bg-gray-400 cursor-not-allowed'
-            : 'bg-blue-600 hover:bg-blue-800'
-        }`}
-        disabled={isPastEvent || registeredEvents.includes(event.id)}
+  const renderEventCard = (event, isPastEvent) => {
+    const alreadyRegistered = isRegistered(event.id);
+
+    return (
+      <div
+        key={event.id}
+        className="bg-white border rounded-lg shadow-lg p-4 w-full max-w-sm mx-auto flex flex-col justify-between hover:shadow-xl transition"
+        onClick={() => setSelectedEvent(event)}
       >
-        {isPastEvent
-          ? 'Registration Closed'
-          : registeredEvents.includes(event.id)
-          ? 'Registered'
-          : 'Register'}
-      </button>
-    </div>
-  );
+        {event.poster && (
+          <img src={event.poster} alt="Poster" className="rounded mb-3 h-48 object-contain" />
+        )}
+        <h3 className="text-lg font-bold">{event.title}</h3>
+        <p>📅 {new Date(event.date).toLocaleDateString()} | 🕒 {event.time.slice(0, 5)}</p>
+        <p>📍 Location: {event.location}</p>
+        <p>🎓 Club: {event.club_name}</p>
+        <p>📂 Type: {event.event_type}</p>
+        <p className="text-gray-700 line-clamp-3 mt-2">{event.description}</p>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            handleRegister(event.id, event.title, isPastEvent);
+          }}
+          className={`mt-4 px-4 py-2 rounded text-white ${
+            isPastEvent || alreadyRegistered
+              ? 'bg-gray-400 cursor-not-allowed'
+              : 'bg-blue-600 hover:bg-blue-800'
+          }`}
+          disabled={isPastEvent || alreadyRegistered}
+        >
+          {isPastEvent
+            ? 'Registration Closed'
+            : alreadyRegistered
+            ? 'Registered'
+            : 'Register'}
+        </button>
+      </div>
+    );
+  };
 
   return (
     <div>

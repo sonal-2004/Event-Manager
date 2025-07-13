@@ -21,6 +21,7 @@ const EventDashboard = () => {
   const [registrations, setRegistrations] = useState({});
   const [expandedEventId, setExpandedEventId] = useState(null);
   const [expandedDescriptionId, setExpandedDescriptionId] = useState(null);
+const [successMessage, setSuccessMessage] = useState('');
 
   const fetchEvents = async () => {
     try {
@@ -75,23 +76,24 @@ const EventDashboard = () => {
 
 
   const handleCreate = async () => {
-    if (!validateForm()) return;
+  if (!validateForm()) return;
 
-    try {
-      console.log('Submitting new event:', newEvent);
-      const formData = buildFormData();
+  try {
+    const formData = buildFormData();
 
-      await axios.post('/api/clubAdmin/events', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+    await axios.post('/api/clubAdmin/events', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
 
-      fetchEvents();
-      resetForm();
-    } catch (error) {
-      console.error('Failed to create event:', error.response?.data || error);
-      alert(error.response?.data?.message || 'Failed to create event.');
-    }
-  };
+    fetchEvents();
+    setSuccessMessage(`${newEvent.title} created successfully!`);
+    setTimeout(() => setSuccessMessage(''), 3000);
+    resetForm();
+  } catch (error) {
+    console.error('Failed to create event:', error.response?.data || error);
+    alert(error.response?.data?.message || 'Failed to create event.');
+  }
+};
 
   const handleEdit = (event) => {
     setEditMode(true);

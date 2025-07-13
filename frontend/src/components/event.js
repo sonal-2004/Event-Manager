@@ -60,15 +60,19 @@ const EventDashboard = () => {
     return true;
   };
 
-  const buildFormData = () => {
-    const formData = new FormData();
-    Object.entries(newEvent).forEach(([key, value]) => {
-      if (value && (key !== 'poster' || (value instanceof File))) {
-        formData.append(key, value);
-      }
-    });
-    return formData;
-  };
+ const buildFormData = () => {
+  const formData = new FormData();
+  formData.append('title', newEvent.title);
+  formData.append('description', newEvent.description);
+  formData.append('date', newEvent.date);
+  formData.append('time', newEvent.time);
+  formData.append('location', newEvent.location);
+  if (newEvent.poster) {
+    formData.append('poster', newEvent.poster);
+  }
+  return formData;
+};
+
 
   const handleCreate = async () => {
     if (!validateForm()) return;
@@ -290,10 +294,11 @@ const EventDashboard = () => {
 
               {event.poster && (
                 <img
-                  src={event.poster}
-                  alt="Poster"
-                  className="rounded mt-2 max-h-40 w-full object-cover"
-                />
+                    src={event.poster}
+                   alt="Poster"
+                    className="rounded mt-2 max-h-40 object-contain w-full"
+/>
+
               )}
 
               <div className="mt-4 flex gap-2 flex-wrap">

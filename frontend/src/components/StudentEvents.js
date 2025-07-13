@@ -1,4 +1,3 @@
-// StudentEvents.jsx
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import Navbar from '../components/navbar';
@@ -10,6 +9,8 @@ const StudentEvents = () => {
   const [events, setEvents] = useState([]);
   const [registeredEvents, setRegisteredEvents] = useState([]);
   const [selectedEvent, setSelectedEvent] = useState(null);
+  const [clubFilter, setClubFilter] = useState('All');
+  const [typeFilter, setTypeFilter] = useState('All');
 
   useEffect(() => {
     fetchEvents();
@@ -57,8 +58,18 @@ const StudentEvents = () => {
   };
 
   const today = new Date();
-  const upcomingEvents = events.filter(e => new Date(e.date) >= today);
-  const pastEvents = events.filter(e => new Date(e.date) < today);
+
+  const filteredEvents = events.filter(e => {
+    const matchesClub = clubFilter === 'All' || e.club_name === clubFilter;
+    const matchesType = typeFilter === 'All' || e.event_type === typeFilter;
+    return matchesClub && matchesType;
+  });
+
+  const uniqueClubs = ['All', ...new Set(events.map(e => e.club_name).filter(Boolean))];
+  const uniqueTypes = ['All', ...new Set(events.map(e => e.event_type).filter(Boolean))];
+
+  const upcomingEvents = filteredEvents.filter(e => new Date(e.date) >= today);
+  const pastEvents = filteredEvents.filter(e => new Date(e.date) < today);
 
   const renderEventCard = (event, isPastEvent = false) => (
     <div
@@ -83,7 +94,8 @@ const StudentEvents = () => {
           })}
         </p>
         <p>📍 Location: {event.location}</p>
-        <p>🎓 Organized By: {event.club_name}</p>
+        <p>🎓 Club: {event.club_name}</p>
+        <p>📂 Type: {event.event_type}</p>
         <p className="mt-2 text-gray-700 line-clamp-3 overflow-hidden h-[4.5em]">
           {event.description}
         </p>
@@ -139,6 +151,35 @@ const StudentEvents = () => {
         </div>
       </div>
 
+      {/* Filters */}
+      <div className="flex flex-wrap gap-4 justify-center my-6">
+        <div>
+          <label className="mr-2 text-purple-700 font-semibold">Filter by Club:</label>
+          <select
+            className="border px-3 py-1 rounded"
+            value={clubFilter}
+            onChange={(e) => setClubFilter(e.target.value)}
+          >
+            {uniqueClubs.map(club => (
+              <option key={club} value={club}>{club}</option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="mr-2 text-purple-700 font-semibold">Filter by Type:</label>
+          <select
+            className="border px-3 py-1 rounded"
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value)}
+          >
+            {uniqueTypes.map(type => (
+              <option key={type} value={type}>{type}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
       {/* Upcoming Events */}
       <div className="text-center my-12">
         <img src="/assets/calender.png" alt="Calendar Icon" className="w-12 h-12 mx-auto mb-4" />
@@ -148,7 +189,7 @@ const StudentEvents = () => {
         {upcomingEvents.length > 0 ? (
           upcomingEvents.map(event => renderEventCard(event, false))
         ) : (
-          <p>No upcoming events.</p>
+          <p className="text-center col-span-full">No upcoming events found.</p>
         )}
       </div>
 
@@ -161,7 +202,7 @@ const StudentEvents = () => {
         {pastEvents.length > 0 ? (
           pastEvents.map(event => renderEventCard(event, true))
         ) : (
-          <p>No past events.</p>
+          <p className="text-center col-span-full">No past events found.</p>
         )}
       </div>
 
@@ -191,7 +232,8 @@ const StudentEvents = () => {
               })}
             </p>
             <p>📍 Location: {selectedEvent.location}</p>
-            <p>🎓 Organized By: {selectedEvent.club_name}</p>
+            <p>🎓 Club: {selectedEvent.club_name}</p>
+            <p>📂 Type: {selectedEvent.event_type}</p>
             <div className="mt-3 text-gray-700 whitespace-pre-wrap">
               {selectedEvent.description}
             </div>

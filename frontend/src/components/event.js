@@ -19,6 +19,7 @@ const Event = () => {
   });
   const [isEditMode, setIsEditMode] = useState(false);
   const [eventToEdit, setEventToEdit] = useState(null);
+  const [successMessage, setSuccessMessage] = useState('');
 
   const fetchMyEvents = async () => {
     try {
@@ -42,8 +43,44 @@ const Event = () => {
     }
   };
 
+  const resetForm = () => {
+    setFormData({
+      title: '',
+      description: '',
+      date: '',
+      time: '',
+      location: '',
+      club_name: '',
+      event_type: '',
+      poster: null,
+    });
+    setIsEditMode(false);
+    setEventToEdit(null);
+  };
+
+  const validateForm = () => {
+    const requiredFields = ['title', 'description', 'date', 'time', 'location', 'club_name', 'event_type'];
+    for (const field of requiredFields) {
+      if (!formData[field] || formData[field].trim() === '') {
+        alert(`Please fill in the "${field}" field.`);
+        return false;
+      }
+    }
+
+    const selectedDate = new Date(`${formData.date}T${formData.time}`);
+    const now = new Date();
+    if (selectedDate < now) {
+      alert('Please select a valid future date and time.');
+      return false;
+    }
+
+    return true;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!validateForm()) return;
+
     const data = new FormData();
     Object.entries(formData).forEach(([key, value]) => {
       if (value) data.append(key, value);
@@ -51,19 +88,17 @@ const Event = () => {
 
     try {
       if (isEditMode && eventToEdit) {
-        // PUT request for update
         await axios.put(`/api/clubAdmin/event/${eventToEdit.id}`, data, {
           headers: { 'Content-Type': 'multipart/form-data' },
         });
-        alert('✅ Event updated successfully!');
+        setSuccessMessage('✅ Event updated successfully!');
       } else {
-        // POST request for create
         await axios.post('/api/clubAdmin/events', data);
-        alert('✅ Event created successfully!');
+        setSuccessMessage('✅ Event created successfully!');
       }
-
-      resetForm();
       fetchMyEvents();
+      resetForm();
+      setTimeout(() => setSuccessMessage(''), 3000);
     } catch (err) {
       console.error(err);
       alert('❌ Failed to save event');
@@ -81,24 +116,9 @@ const Event = () => {
       location: event.location || '',
       club_name: event.club_name || '',
       event_type: event.event_type || '',
-      poster: null, // reset poster input
-    });
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const resetForm = () => {
-    setFormData({
-      title: '',
-      description: '',
-      date: '',
-      time: '',
-      location: '',
-      club_name: '',
-      event_type: '',
       poster: null,
     });
-    setIsEditMode(false);
-    setEventToEdit(null);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleDelete = async (eventId) => {
@@ -114,61 +134,91 @@ const Event = () => {
   };
 
   return (
-    <div className="p-6">
+    <div className="min-h-screen bg-gray-100 font-sans">
       <Navbar />
 
-      <h2 className="text-3xl font-extrabold text-purple-800 mb-6 text-center">📢 Manage Events</h2>
+      {/* Header */}
+      <header className="relative bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-20 overflow-hidden text-center">
+        {Array.from({ length: 25 }).map((_, index) => (
+          <img
+            key={index}
+            src="/assets/starss.png"
+            alt="Sparkle"
+            className="absolute w-4 h-4 sparkle pointer-events-none"
+            style={{
+              top: `${Math.random() * 100}%`,
+              left: `${Math.random() * 100}%`,
+              animationDelay: `${Math.random() * 5}s`,
+            }}
+          />
+        ))}
+        <h1 className="text-3xl text-yellow-300 font-bold">Event Dashboard</h1>
+        <button
+          className="mt-4 bg-white text-blue-600 px-4 py-2 rounded hover:bg-gray-100 transition"
+          onClick={() => {
+            resetForm();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+        >
+          {isEditMode ? 'Cancel Edit' : 'Add New Event'}
+        </button>
+      </header>
 
-      {/* Create or Edit Form */}
-      <form onSubmit={handleSubmit} className="space-y-4 bg-white p-6 rounded shadow-md max-w-xl mx-auto mb-12">
-        <h3 className="text-xl font-semibold mb-4 text-purple-700">
-          {isEditMode ? '✏️ Edit Event' : '📌 Create New Event'}
-        </h3>
-        <input name="title" value={formData.title} placeholder="Title" onChange={handleChange} className="border p-2 w-full" required />
-        <textarea name="description" value={formData.description} placeholder="Description" onChange={handleChange} className="border p-2 w-full" required />
-        <input name="date" type="date" value={formData.date} onChange={handleChange} className="border p-2 w-full" required />
-        <input name="time" type="time" value={formData.time} onChange={handleChange} className="border p-2 w-full" required />
-        <input name="location" value={formData.location} placeholder="Location" onChange={handleChange} className="border p-2 w-full" required />
-        <input name="club_name" value={formData.club_name} placeholder="Club Name" onChange={handleChange} className="border p-2 w-full" required />
-        <input name="event_type" value={formData.event_type} placeholder="Event Type" onChange={handleChange} className="border p-2 w-full" required />
-        <input name="poster" type="file" onChange={handleChange} className="w-full" />
-
-        <div className="flex gap-4">
-          <button type="submit" className="bg-purple-600 text-white py-2 px-4 rounded hover:bg-purple-700">
-            {isEditMode ? 'Update Event' : 'Create Event'}
-          </button>
-          {isEditMode && (
-            <button type="button" onClick={resetForm} className="text-gray-600 hover:text-black underline">
-              Cancel Edit
+      <div className="p-6 max-w-6xl mx-auto">
+        {/* Event Form */}
+        <div className="bg-white shadow-md rounded-lg p-6 mb-8">
+          <h2 className="text-xl font-semibold mb-4 text-purple-700">
+            {isEditMode ? '✏️ Edit Event' : '📌 Create New Event'}
+          </h2>
+          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <input name="title" placeholder="Title" value={formData.title} onChange={handleChange} className="p-2 border rounded" />
+            <input name="date" type="date" value={formData.date} onChange={handleChange} className="p-2 border rounded" />
+            <input name="time" type="time" value={formData.time} onChange={handleChange} className="p-2 border rounded" />
+            <input name="location" placeholder="Location" value={formData.location} onChange={handleChange} className="p-2 border rounded" />
+            <input name="club_name" placeholder="Club Name" value={formData.club_name} onChange={handleChange} className="p-2 border rounded" />
+            <input name="event_type" placeholder="Event Type" value={formData.event_type} onChange={handleChange} className="p-2 border rounded" />
+            <input name="poster" type="file" onChange={handleChange} className="p-2 border rounded" />
+            <textarea name="description" placeholder="Description" value={formData.description} onChange={handleChange} className="p-2 border rounded col-span-full" />
+            <button type="submit" className="mt-4 bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 col-span-full">
+              {isEditMode ? 'Update Event' : 'Create Event'}
             </button>
-          )}
+          </form>
+          {successMessage && <p className="text-green-600 mt-4 font-medium">{successMessage}</p>}
         </div>
-      </form>
 
-      {/* List of Events */}
-      <div className="max-w-6xl mx-auto">
-        <h3 className="text-2xl font-bold text-purple-800 mb-4">📋 Your Events</h3>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {/* Events List */}
+        <div className="text-center mt-6 mb-4">
+          <img src="/assets/calender.png" alt="Calendar Icon" className="w-12 h-12 mx-auto mb-4" />
+          <h2 className="text-3xl font-bold text-purple-700">Managed Events</h2>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {events.map((event) => (
-            <div key={event.id} className="bg-white p-4 rounded shadow-md">
-              <h4 className="font-semibold text-lg">{event.title}</h4>
-              <p className="text-sm text-gray-600">{event.description}</p>
-              <p className="text-sm">📅 {event.date} | 🕒 {event.time}</p>
-              <p className="text-sm">📍 {event.location}</p>
+            <div key={event.id} className="bg-white shadow-md rounded-lg p-4 transition transform hover:scale-[1.02]">
+              <h3 className="text-xl font-bold mb-2">{event.title}</h3>
+              <p className="text-gray-600 mb-2">{event.description?.slice(0, 100)}...</p>
+              <p>
+                📅 {new Date(event.date).toLocaleDateString()} | 🕒{' '}
+                {new Date('1970-01-01T' + event.time).toLocaleTimeString([], {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </p>
+              <p className="text-sm text-gray-500">📍 {event.location}</p>
               <p className="text-sm">🎓 {event.club_name} | 📂 {event.event_type}</p>
               {event.poster && (
-                <img src={event.poster} alt="Poster" className="max-h-40 mt-2 rounded object-contain" />
+                <img src={event.poster} alt="Poster" className="rounded mt-2 max-h-40 object-contain w-full" />
               )}
-              <div className="mt-3 flex gap-3">
+              <div className="mt-4 flex gap-2 flex-wrap">
                 <button
                   onClick={() => handleEdit(event)}
-                  className="text-yellow-600 hover:text-yellow-800 font-semibold"
+                  className="bg-yellow-400 text-white px-3 py-1 rounded hover:bg-yellow-500"
                 >
                   Edit
                 </button>
                 <button
                   onClick={() => handleDelete(event.id)}
-                  className="text-red-600 hover:text-red-800 font-semibold"
+                  className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
                 >
                   Delete
                 </button>
@@ -177,6 +227,15 @@ const Event = () => {
           ))}
         </div>
       </div>
+
+      {/* Footer */}
+      <footer className="bg-purple-800 text-white py-8 mt-10">
+        <div className="max-w-6xl mx-auto px-4">
+          <div className="text-center">
+            <p>&copy; {new Date().getFullYear()} Campus Events. All rights reserved.</p>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };

@@ -1,9 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { FaCalendarAlt, FaClock, FaMapMarkerAlt } from "react-icons/fa";
 
 export default function StudentEvents() {
-  const [events, setEvents] = useState([]);
   const [groupedEvents, setGroupedEvents] = useState({});
   const [selectedEvent, setSelectedEvent] = useState(null);
 
@@ -11,7 +9,6 @@ export default function StudentEvents() {
     axios
       .get("/api/events")
       .then((res) => {
-        setEvents(res.data);
         groupEventsByClub(res.data);
       })
       .catch((err) => console.error("Error fetching events:", err));
@@ -44,22 +41,22 @@ export default function StudentEvents() {
       onClick={() => openEventModal(event)}
     >
       <h3 className="text-lg font-bold">
-        {event?.title && event.title.trim() !== "" ? event.title : "Untitled Event"}
+        {event?.title?.trim() || "Untitled Event"}
       </h3>
       <p className="text-gray-600">
         📅 {event?.date ? new Date(event.date).toLocaleDateString() : "Invalid Date"} | 🕒{" "}
-        {event?.time && event.time.trim() !== ""
+        {event?.time?.trim()
           ? new Date(`1970-01-01T${event.time}`).toLocaleTimeString([], {
               hour: "2-digit",
               minute: "2-digit",
             })
           : "N/A"}
       </p>
-      <p>📍 Location: {event?.location && event.location.trim() !== "" ? event.location : "N/A"}</p>
-      <p>🎓 Club: {event?.club_name && event.club_name.trim() !== "" ? event.club_name : "N/A"}</p>
-      <p>📂 Type: {event?.event_type && event.event_type.trim() !== "" ? event.event_type : "N/A"}</p>
+      <p>📍 Location: {event?.location?.trim() || "N/A"}</p>
+      <p>🎓 Club: {event?.club_name?.trim() || "N/A"}</p>
+      <p>📂 Type: {event?.event_type?.trim() || "N/A"}</p>
       <p className="text-gray-700 line-clamp-3 mt-2">
-        {event?.description && event.description.trim() !== "" ? event.description : "No description."}
+        {event?.description?.trim() || "No description."}
       </p>
     </div>
   );
@@ -76,7 +73,7 @@ export default function StudentEvents() {
         </div>
       ))}
 
-      {/* Modal for selected event */}
+      {/* Modal */}
       {selectedEvent && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg max-w-xl w-full relative">
@@ -87,13 +84,13 @@ export default function StudentEvents() {
               ✖
             </button>
             <h2 className="text-xl font-bold mb-2">
-              {selectedEvent?.title && selectedEvent.title.trim() !== "" ? selectedEvent.title : "Untitled Event"}
+              {selectedEvent?.title?.trim() || "Untitled Event"}
             </h2>
             <p>
               📅 {selectedEvent?.date
                 ? new Date(selectedEvent.date).toLocaleDateString()
                 : "Invalid Date"} | 🕒{" "}
-              {selectedEvent?.time && selectedEvent.time.trim() !== ""
+              {selectedEvent?.time?.trim()
                 ? new Date(`1970-01-01T${selectedEvent.time}`).toLocaleTimeString([], {
                     hour: "2-digit",
                     minute: "2-digit",
@@ -101,27 +98,16 @@ export default function StudentEvents() {
                 : "N/A"}
             </p>
             <p>
-              📍 Location:{" "}
-              {selectedEvent?.location && selectedEvent.location.trim() !== ""
-                ? selectedEvent.location
-                : "N/A"}
+              📍 Location: {selectedEvent?.location?.trim() || "N/A"}
             </p>
             <p>
-              🎓 Club:{" "}
-              {selectedEvent?.club_name && selectedEvent.club_name.trim() !== ""
-                ? selectedEvent.club_name
-                : "N/A"}
+              🎓 Club: {selectedEvent?.club_name?.trim() || "N/A"}
             </p>
             <p>
-              📂 Type:{" "}
-              {selectedEvent?.event_type && selectedEvent.event_type.trim() !== ""
-                ? selectedEvent.event_type
-                : "N/A"}
+              📂 Type: {selectedEvent?.event_type?.trim() || "N/A"}
             </p>
             <p className="mt-3 text-gray-700 whitespace-pre-wrap">
-              {selectedEvent?.description && selectedEvent.description.trim() !== ""
-                ? selectedEvent.description
-                : "No description."}
+              {selectedEvent?.description?.trim() || "No description."}
             </p>
           </div>
         </div>

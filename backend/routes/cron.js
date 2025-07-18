@@ -1,4 +1,3 @@
-// routes/cron.js
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
@@ -14,11 +13,16 @@ router.get('/send-reminders', async (req, res) => {
     const targetDate = `${yyyy}-${mm}-${dd}`;
 
     const [events] = await db.query(`
-      SELECT e.title AS eventName, e.date, u.name AS studentName, u.email 
+      SELECT 
+        e.title AS eventName,
+        e.date,
+        u.name AS studentName,
+        u.email
       FROM student_registrations r
       JOIN users u ON u.id = r.student_id
       JOIN events e ON e.id = r.event_id
       WHERE DATE(e.date) = ?
+        AND u.role = 'student'
     `, [targetDate]);
 
     for (const row of events) {

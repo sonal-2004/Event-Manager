@@ -48,17 +48,22 @@ const StudentEvents = () => {
   };
 
   const handleRegister = async (eventId) => {
-    if (!user || user.role !== 'student') {
-      alert('Please log in as a student to register for events.');
-      window.location.href = '/login';
-      return;
-    }
     try {
+      const authCheck = await axios.get('/api/auth/user');
+      if (!authCheck.data || authCheck.data.role !== 'student') {
+        alert('Please log in as a student to register for events.');
+        window.location.href = '/login';
+        return;
+      }
       await axios.post(`/api/events/register/${eventId}`);
       await fetchAllData();
       alert('Successfully registered!');
     } catch (err) {
-      alert(err.response?.data?.message || 'Registration failed');
+      if (err.response?.status === 401) {
+        window.location.href = '/login';
+      } else {
+        alert(err.response?.data?.message || 'Registration failed');
+      }
     }
   };
 
@@ -130,6 +135,13 @@ const StudentEvents = () => {
     );
   };
 
+  const tabHeaderText = {
+    All: 'All Events',
+    Upcoming: 'Upcoming Events',
+    Past: 'Past Events',
+    Registered: 'Registered Events',
+  };
+
   return (
     <div>
       <Navbar />
@@ -150,7 +162,7 @@ const StudentEvents = () => {
           />
         ))}
         <h1 className="relative z-10 text-4xl font-bold">
-          🎉 {activeTab} Events {filters.sortBy && `(Sorted by ${filters.sortBy})`}
+          🎉 {tabHeaderText[activeTab]} {filters.sortBy && `(Sorted by ${filters.sortBy})`}
         </h1>
         <p className="mt-2 text-yellow-300 italic z-10 relative">
           Find & Register for Campus Events

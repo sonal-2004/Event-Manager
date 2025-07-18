@@ -131,11 +131,13 @@ const StudentEvents = () => {
     return (
       <div key={event.id} className="bg-white rounded-lg shadow p-4">
         {event.poster && (
-          <img
-            src={event.poster}
-            alt="Poster"
-            className="rounded mb-2 w-full h-40 object-cover object-center"
-          />
+          <div className="w-full h-48 flex items-center justify-center bg-gray-100 rounded mb-2 overflow-hidden">
+            <img
+              src={event.poster}
+              alt="Poster"
+              className="max-h-full max-w-full object-contain"
+            />
+          </div>
         )}
         <h3 className="text-lg font-bold">{event.title}</h3>
         <p>📅 {new Date(event.date).toLocaleDateString()} | 🕒 {event.time}</p>

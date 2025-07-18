@@ -18,8 +18,19 @@ const StudentEvents = () => {
   }, []);
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const redirectAction = params.get('action');
+    const eventId = params.get('eventId');
+    const tab = params.get('tab');
+
     if (user && user.role === 'student') {
-      fetchRegisteredEvents();
+      fetchRegisteredEvents().then(() => {
+        if (redirectAction === 'register' && eventId) {
+          handleRegister(eventId);
+        } else if (tab === 'registered') {
+          setActiveTab('Registered');
+        }
+      });
     }
   }, [user]);
 
@@ -56,7 +67,7 @@ const StudentEvents = () => {
 
   const handleRegister = async (eventId) => {
     if (!user || user.role !== 'student') {
-      window.location.href = `/login?redirect=/events`;
+      window.location.href = `/login?redirect=/events?action=register&eventId=${eventId}`;
       return;
     }
     try {
@@ -78,7 +89,7 @@ const StudentEvents = () => {
       filtered = filtered.filter(e => new Date(e.date) < today);
     } else if (activeTab === 'Registered') {
       if (!user || user.role !== 'student') {
-        window.location.href = `/login?redirect=/events`;
+        window.location.href = `/login?redirect=/events?tab=registered`;
         return;
       }
       filtered = filtered.filter(e => registeredEvents.includes(e.id));
@@ -120,7 +131,11 @@ const StudentEvents = () => {
     return (
       <div key={event.id} className="bg-white rounded-lg shadow p-4">
         {event.poster && (
-          <img src={event.poster} alt="Poster" className="rounded w-full max-h-64 object-cover mb-2" />
+          <img
+            src={event.poster}
+            alt="Poster"
+            className="rounded mb-2 w-full h-40 object-cover object-center"
+          />
         )}
         <h3 className="text-lg font-bold">{event.title}</h3>
         <p>📅 {new Date(event.date).toLocaleDateString()} | 🕒 {event.time}</p>

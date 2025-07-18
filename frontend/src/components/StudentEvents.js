@@ -50,6 +50,7 @@ const StudentEvents = () => {
   const fetchEvents = async () => {
     try {
       const res = await axios.get('/api/events/all');
+      console.log('Events:', res.data);
       setEvents(res.data.events || []);
     } catch (err) {
       console.error('Error fetching events', err);
@@ -59,28 +60,28 @@ const StudentEvents = () => {
   const fetchRegisteredEvents = async () => {
     try {
       const res = await axios.get('/api/events/registered');
-      const uniqueIds = [...new Set(res.data.events.map(ev => ev.id))];
-      setRegisteredEvents(uniqueIds);
+      const registeredIds = res.data.events.map(ev => ev.id); // adjust if structure is different
+      setRegisteredEvents(registeredIds);
+      console.log('Registered Events:', registeredIds);
     } catch (err) {
       console.error('Error fetching registered events', err);
     }
   };
 
   const handleRegister = async (eventId) => {
-  if (!user || user.role !== 'student') {
-    window.location.href = `/login?redirect=/events?action=register&eventId=${eventId}`;
-    return;
-  }
+    if (!user || user.role !== 'student') {
+      window.location.href = `/login?redirect=/events?action=register&eventId=${eventId}`;
+      return;
+    }
 
-  try {
-    const res = await axios.post(`/api/events/register/${eventId}`);
-    alert(`✅ ${res.data.message || 'Registered successfully!'}`);
-    fetchRegisteredEvents();
-  } catch (err) {
-    alert(err.response?.data?.message || '❌ Registration failed');
-  }
-};
-
+    try {
+      const res = await axios.post(`/api/events/register/${eventId}`);
+      alert(`✅ ${res.data.message || 'Registered successfully!'}`);
+      fetchRegisteredEvents();
+    } catch (err) {
+      alert(err.response?.data?.message || '❌ Registration failed');
+    }
+  };
 
   const filterAndGroupEvents = () => {
     const today = new Date();

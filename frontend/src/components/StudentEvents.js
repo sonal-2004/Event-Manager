@@ -11,7 +11,6 @@ const StudentEvents = () => {
   const [filteredEvents, setFilteredEvents] = useState([]);
   const [activeTab, setActiveTab] = useState('All');
   const [filters, setFilters] = useState({ sortBy: '' });
-  const [groupedEvents, setGroupedEvents] = useState({});
 
   useEffect(() => {
     fetchUser();
@@ -22,7 +21,7 @@ const StudentEvents = () => {
   }, [user]);
 
   useEffect(() => {
-    filterAndGroupEvents();
+    filterEvents();
   }, [activeTab, filters, events, registeredEvents]);
 
   const fetchUser = async () => {
@@ -56,14 +55,14 @@ const StudentEvents = () => {
     }
     try {
       await axios.post(`/api/events/register/${eventId}`);
-      fetchAllData();
+      await fetchAllData();
       alert('Successfully registered!');
     } catch (err) {
       alert(err.response?.data?.message || 'Registration failed');
     }
   };
 
-  const filterAndGroupEvents = () => {
+  const filterEvents = () => {
     const today = new Date();
     let result = [...events];
 
@@ -75,35 +74,17 @@ const StudentEvents = () => {
       result = result.filter(e => registeredEvents.includes(e.id));
     }
 
-    // Sorting
-    let grouped = {};
     if (filters.sortBy === 'Date') {
       result.sort((a, b) => new Date(a.date) - new Date(b.date));
-      grouped = groupBy(result, e => new Date(e.date).toLocaleDateString());
     } else if (filters.sortBy === 'Time') {
       result.sort((a, b) => a.time.localeCompare(b.time));
-      grouped = groupBy(result, e => e.time);
     } else if (filters.sortBy === 'Club') {
       result.sort((a, b) => a.club_name.localeCompare(b.club_name));
-      grouped = groupBy(result, e => e.club_name);
     } else if (filters.sortBy === 'Type') {
       result.sort((a, b) => a.event_type.localeCompare(b.event_type));
-      grouped = groupBy(result, e => e.event_type);
-    } else {
-      grouped = { 'All Events': result };
     }
 
     setFilteredEvents(result);
-    setGroupedEvents(grouped);
-  };
-
-  const groupBy = (arr, keyGetter) => {
-    return arr.reduce((acc, item) => {
-      const key = keyGetter(item);
-      if (!acc[key]) acc[key] = [];
-      acc[key].push(item);
-      return acc;
-    }, {});
   };
 
   const renderEventCard = (event) => {
@@ -113,7 +94,7 @@ const StudentEvents = () => {
     return (
       <div
         key={event.id}
-        className="bg-white rounded-lg shadow-md p-4 max-w-sm mx-auto flex flex-col hover:shadow-xl transition"
+        className="bg-white rounded-lg shadow-lg shadow-purple-300 p-4 max-w-sm mx-auto flex flex-col hover:shadow-xl transition"
       >
         {event.poster && (
           <img
@@ -127,7 +108,6 @@ const StudentEvents = () => {
         <p>📍 {event.location}</p>
         <p>🎓 {event.club_name} | 🏷️ {event.event_type}</p>
         <p className="text-gray-700 mt-2 line-clamp-3">{event.description}</p>
-
         {isPast ? (
           <button
             disabled
@@ -169,11 +149,20 @@ const StudentEvents = () => {
             }}
           />
         ))}
-        <h1 className="relative z-10 text-4xl font-bold">🎉 Student Events Dashboard</h1>
-        <p className="mt-2 text-yellow-300 italic z-10 relative">Find & Register for Campus Events</p>
+        <h1 className="relative z-10 text-4xl font-bold">
+          🎉 {activeTab} Events {filters.sortBy && `(Sorted by ${filters.sortBy})`}
+        </h1>
+        <p className="mt-2 text-yellow-300 italic z-10 relative">
+          Find & Register for Campus Events
+        </p>
+        <div className="relative z-10 mt-6 flex justify-center gap-4 flex-wrap">
+          <img src="/images/event-left.png" alt="img1" className="h-32 w-48 rounded-xl shadow-lg object-cover" />
+          <img src="/images/event-right.jpg" alt="img2" className="h-32 w-48 rounded-xl shadow-lg object-cover" />
+          <img src="/images/event-mid.jpg" alt="img3" className="h-32 w-48 rounded-xl shadow-lg object-cover" />
+        </div>
       </div>
 
-      <div className="flex justify-center gap-4 my-6 flex-wrap">
+      <div className="flex justify-center gap-4 my-6">
         {['All', 'Upcoming', 'Past', 'Registered'].map((tab) => (
           <button
             key={tab}
@@ -190,6 +179,7 @@ const StudentEvents = () => {
       <div className="flex justify-center gap-4 px-4 mb-6">
         <select
           className="border px-3 py-1 rounded"
+          value={filters.sortBy}
           onChange={(e) => setFilters({ ...filters, sortBy: e.target.value })}
         >
           <option value="">Sort By</option>
@@ -200,20 +190,11 @@ const StudentEvents = () => {
         </select>
       </div>
 
-      <div className="px-4 mb-10">
-        {Object.keys(groupedEvents).length ? (
-          Object.entries(groupedEvents).map(([group, items]) => (
-            <div key={group} className="mb-8">
-              <h2 className="text-xl font-semibold text-gray-800 mb-4 border-b pb-1">
-                {filters.sortBy ? `🗂 ${filters.sortBy}: ${group}` : group}
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {items.map(renderEventCard)}
-              </div>
-            </div>
-          ))
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 px-4 mb-10">
+        {filteredEvents.length ? (
+          filteredEvents.map(renderEventCard)
         ) : (
-          <p className="text-center text-gray-500">No events found.</p>
+          <p className="text-center col-span-3 text-gray-500">No events found.</p>
         )}
       </div>
 

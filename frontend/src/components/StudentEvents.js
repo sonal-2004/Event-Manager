@@ -5,6 +5,7 @@ import Navbar from '../components/navbar';
 axios.defaults.withCredentials = true;
 
 const StudentEvents = () => {
+  const [user, setUser] = useState(null);
   const [events, setEvents] = useState([]);
   const [registeredEvents, setRegisteredEvents] = useState([]);
   const [filteredEvents, setFilteredEvents] = useState([]);
@@ -17,12 +18,22 @@ const StudentEvents = () => {
   });
 
   useEffect(() => {
+    fetchUser();
     fetchAllData();
   }, []);
 
   useEffect(() => {
     filterEvents();
   }, [activeTab, filters, events, registeredEvents]);
+
+  const fetchUser = async () => {
+    try {
+      const res = await axios.get('/api/auth/user');
+      setUser(res.data); // { role: 'student', name: '...' }
+    } catch (err) {
+      setUser(null);
+    }
+  };
 
   const fetchAllData = async () => {
     try {
@@ -38,9 +49,15 @@ const StudentEvents = () => {
   };
 
   const handleRegister = async (eventId) => {
+    if (!user || user.role !== 'student') {
+      alert('Please log in as a student to register for events.');
+      return;
+    }
+
     try {
       await axios.post(`/api/events/register/${eventId}`);
       fetchAllData();
+      alert('Successfully registered!');
     } catch (err) {
       alert(err.response?.data?.message || 'Registration failed');
     }
@@ -77,7 +94,7 @@ const StudentEvents = () => {
       >
         {event.poster && (
           <img
-            src={`${event.poster}`}
+            src={event.poster}
             alt="Poster"
             className="rounded max-h-60 w-full object-cover mb-3"
           />
@@ -146,11 +163,15 @@ const StudentEvents = () => {
 
       {/* Filters */}
       <div className="flex flex-wrap justify-center gap-4 px-4 mb-6">
-        <input
-          type="date"
+        <select
           className="border px-3 py-1 rounded"
           onChange={(e) => setFilters({ ...filters, date: e.target.value })}
-        />
+        >
+          <option value="">Date</option>
+          {uniqueValues('date').map((d, i) => (
+            <option key={i} value={d}>{d}</option>
+          ))}
+        </select>
         <select
           className="border px-3 py-1 rounded"
           onChange={(e) => setFilters({ ...filters, time: e.target.value })}
@@ -194,7 +215,7 @@ const StudentEvents = () => {
         &copy; {new Date().getFullYear()} Student Events Portal. All rights reserved.
       </footer>
 
-      {/* Tailwind sparkle animation */}
+      {/* Sparkle Animation */}
       <style>{`
         @keyframes twinkle {
           0%, 100% { opacity: 0.2; transform: scale(1); }

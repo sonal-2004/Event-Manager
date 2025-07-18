@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
+const { sendRegistrationEmail } = require("../utils/emailService");
 
 // ✅ Middleware: Only allow logged-in students
 const isStudent = (req, res, next) => {
@@ -25,13 +26,18 @@ router.post('/register/:eventId', isStudent, async (req, res) => {
       return res.status(400).json({ message: 'Already registered' });
     }
 
+    // Register the student
     await db.query(
       'INSERT INTO student_registrations (student_id, event_id) VALUES (?, ?)',
       [studentId, eventId]
     );
 
-    // Get event title for confirmation
+    // Fetch student & event details
+    const [[student]] = await db.query('SELECT name, email FROM students WHERE id = ?', [studentId]);
     const [[event]] = await db.query('SELECT title FROM events WHERE id = ?', [eventId]);
+
+    // ✅ Send confirmation email
+    await sendRegistrationEmail(student.email, student.name, event.title);
 
     res.status(200).json({ message: `Registered successfully for ${event.title}` });
   } catch (err) {
@@ -39,6 +45,7 @@ router.post('/register/:eventId', isStudent, async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 });
+
 
 // ✅ Get all events
 router.get('/all', async (req, res) => {

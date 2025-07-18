@@ -16,9 +16,12 @@ const StudentEvents = () => {
     fetchUser();
   }, []);
 
-  useEffect(() => {
-    if (user !== null) fetchAllData();
-  }, [user]);
+ useEffect(() => {
+  if (user?.role === "student") {
+    fetchAllData();
+  }
+}, [user]);
+
 
   useEffect(() => {
     filterEvents();

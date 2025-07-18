@@ -11,7 +11,8 @@ const StudentEvents = () => {
   const [selectedTab, setSelectedTab] = useState('all');
   const [sortOption, setSortOption] = useState('');
   const [selectedEvent, setSelectedEvent] = useState(null);
-  const [isLoggedIn, setIsLoggedIn] = useState(null); // null = checking
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchEvents();
@@ -32,11 +33,11 @@ const StudentEvents = () => {
       if (res.data && res.data.email) {
         setIsLoggedIn(true);
         fetchRegisteredEvents();
-      } else {
-        setIsLoggedIn(false);
       }
     } catch {
       setIsLoggedIn(false);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -45,7 +46,7 @@ const StudentEvents = () => {
       const res = await axios.get('/api/events/all');
       setEvents(res.data);
     } catch (error) {
-      console.error('Failed to fetch events:', error);
+      console.error('❌ Failed to fetch events:', error);
     }
   };
 
@@ -54,7 +55,7 @@ const StudentEvents = () => {
       const res = await axios.get('/api/student/registered');
       setRegisteredEvents(res.data.map(e => e.id));
     } catch (error) {
-      console.error('Could not fetch registered events');
+      console.error('⚠️ Could not fetch registered events');
     }
   };
 
@@ -70,10 +71,11 @@ const StudentEvents = () => {
       alert("✅ Registration successful!");
       fetchRegisteredEvents();
     } catch (error) {
+      console.error('❌ Registration error:', error);
       if (error.response?.status === 400) {
-        alert("ℹ️ You are already registered for this event.");
+        alert("ℹ️ You're already registered for this event.");
       } else {
-        alert("❌ Registration failed.");
+        alert("❌ Registration failed. Please try again.");
       }
     }
   };
@@ -86,32 +88,22 @@ const StudentEvents = () => {
       switch (sortOption) {
         case 'date': return new Date(a.date) - new Date(b.date);
         case 'time': return a.time.localeCompare(b.time);
-        case 'type': return a.eventType?.localeCompare(b.eventType || '');
-        case 'club': return a.club_name?.localeCompare(b.club_name || '');
+        case 'eventType': return (a.eventType || '').localeCompare(b.eventType || '');
+        case 'club_name': return (a.club_name || '').localeCompare(b.club_name || '');
         default: return 0;
       }
     });
   };
 
   const getFilteredEvents = () => {
-    let base = [];
+    let base = events;
 
-    if (!isLoggedIn) {
-      base = events;
-    } else {
-      switch (selectedTab) {
-        case 'upcoming':
-          base = events.filter(e => !isPast(e.date));
-          break;
-        case 'past':
-          base = events.filter(e => isPast(e.date));
-          break;
-        case 'registered':
-          base = events.filter(e => registeredEvents.includes(e.id));
-          break;
-        default:
-          base = events;
-      }
+    if (selectedTab === 'upcoming') {
+      base = base.filter(e => !isPast(e.date));
+    } else if (selectedTab === 'past') {
+      base = base.filter(e => isPast(e.date));
+    } else if (selectedTab === 'registered') {
+      base = base.filter(e => registeredEvents.includes(e.id));
     }
 
     return sortEvents(base);
@@ -123,10 +115,9 @@ const StudentEvents = () => {
     if (!sortOption) return { '': list };
 
     return list.reduce((groups, event) => {
-      const key =
-        sortOption === 'date'
-          ? new Date(event.date).toLocaleDateString()
-          : event[sortOption] || 'Unknown';
+      const key = sortOption === 'date'
+        ? new Date(event.date).toLocaleDateString()
+        : event[sortOption] || 'Unknown';
       if (!groups[key]) groups[key] = [];
       groups[key].push(event);
       return groups;
@@ -140,7 +131,7 @@ const StudentEvents = () => {
     return (
       <div
         key={event.id}
-        className="bg-white border rounded-lg shadow-md p-4 max-w-sm mx-auto hover:shadow-xl transition cursor-pointer"
+        className="bg-white border rounded-lg shadow-md p-4 hover:shadow-lg transition cursor-pointer"
         onClick={() => setSelectedEvent(event)}
       >
         {event.poster && (
@@ -161,7 +152,7 @@ const StudentEvents = () => {
               if (!isPastEvent && !isRegistered) handleRegister(event.id);
             }}
             disabled={isPastEvent || isRegistered}
-            className={`mt-4 w-full py-2 rounded text-white ${isPastEvent || isRegistered ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
+            className={`mt-4 w-full py-2 rounded text-white ${isPastEvent || isRegistered ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'}`}
           >
             {isPastEvent ? 'Registration Closed' : isRegistered ? 'Registered' : 'Register'}
           </button>
@@ -171,7 +162,7 @@ const StudentEvents = () => {
   };
 
   const renderTabs = () => {
-    const tabs = isLoggedIn ? ['all', 'upcoming', 'past', 'registered'] : ['all'];
+    const tabs = ['all', ...(isLoggedIn ? ['upcoming', 'past', 'registered'] : [])];
     return tabs.map(tab => (
       <button
         key={tab}
@@ -182,6 +173,8 @@ const StudentEvents = () => {
       </button>
     ));
   };
+
+  if (loading) return <p className="text-center py-10 text-lg text-gray-600">Loading...</p>;
 
   return (
     <div>
@@ -195,8 +188,8 @@ const StudentEvents = () => {
       {/* Tabs */}
       <div className="flex justify-center my-6 gap-2 flex-wrap">{renderTabs()}</div>
 
-      {/* Sort Filter */}
-      <div className="flex justify-end items-center px-4 mb-4">
+      {/* Filter Box */}
+      <div className="flex justify-end items-center px-4 mb-6">
         <label className="mr-2 font-medium">Sort by:</label>
         <select
           value={sortOption}
@@ -207,7 +200,7 @@ const StudentEvents = () => {
           <option value="date">Date</option>
           <option value="time">Time</option>
           <option value="eventType">Event Type</option>
-          <option value="club_name">Club Name</option>
+          <option value="club_name">Club</option>
         </select>
       </div>
 

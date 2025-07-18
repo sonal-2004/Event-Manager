@@ -8,10 +8,9 @@ const StudentEvents = () => {
   const [user, setUser] = useState(null);
   const [events, setEvents] = useState([]);
   const [registeredEvents, setRegisteredEvents] = useState([]);
-  const [filteredEvents, setFilteredEvents] = useState([]);
+  const [groupedEvents, setGroupedEvents] = useState({});
   const [activeTab, setActiveTab] = useState('All');
   const [filters, setFilters] = useState({ sortBy: '' });
-  const [groupedEvents, setGroupedEvents] = useState({});
 
   useEffect(() => {
     fetchUser();
@@ -30,8 +29,7 @@ const StudentEvents = () => {
       const res = await axios.get('/api/auth/user');
       setUser(res.data);
     } catch (err) {
-      setUser(null);
-      fetchAllData(); // allow guests to view events
+      setUser(null); // treat as guest
     }
   };
 
@@ -51,13 +49,13 @@ const StudentEvents = () => {
   const handleRegister = async (eventId) => {
     if (!user || user.role !== 'student') {
       alert('Please log in as a student to register for events.');
-      window.location.href = '/login';
+      window.location.href = `/login?redirect=/events`;
       return;
     }
     try {
       await axios.post(`/api/events/register/${eventId}`);
-      fetchAllData();
       alert('Successfully registered!');
+      fetchAllData();
     } catch (err) {
       alert(err.response?.data?.message || 'Registration failed');
     }
@@ -75,7 +73,6 @@ const StudentEvents = () => {
       result = result.filter(e => registeredEvents.includes(e.id));
     }
 
-    // Sorting
     let grouped = {};
     if (filters.sortBy === 'Date') {
       result.sort((a, b) => new Date(a.date) - new Date(b.date));
@@ -93,7 +90,6 @@ const StudentEvents = () => {
       grouped = { 'All Events': result };
     }
 
-    setFilteredEvents(result);
     setGroupedEvents(grouped);
   };
 
@@ -182,7 +178,7 @@ const StudentEvents = () => {
             }`}
             onClick={() => setActiveTab(tab)}
           >
-            {tab}
+            {tab === 'All' ? 'All Events' : `${tab} Events`}
           </button>
         ))}
       </div>

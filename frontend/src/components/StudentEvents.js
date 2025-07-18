@@ -50,7 +50,7 @@ const StudentEvents = () => {
   const fetchEvents = async () => {
     try {
       const res = await axios.get('/api/events/all');
-      setEvents(res.data);
+      setEvents(res.data.events || res.data);
     } catch (err) {
       console.error('Error fetching events', err);
     }
@@ -59,7 +59,7 @@ const StudentEvents = () => {
   const fetchRegisteredEvents = async () => {
     try {
       const res = await axios.get('/api/events/registered');
-      setRegisteredEvents(res.data.map(ev => ev.id));
+      setRegisteredEvents(res.data.events.map(ev => ev.id));
     } catch (err) {
       console.error('Error fetching registered events', err);
     }
@@ -71,8 +71,9 @@ const StudentEvents = () => {
       return;
     }
     try {
+      const event = events.find(e => e.id === parseInt(eventId));
       await axios.post(`/api/events/register/${eventId}`);
-      alert('✅ Successfully registered! Check your email for confirmation.');
+      alert(`✅ Registered successfully for ${event?.title || 'event'}!`);
       fetchRegisteredEvents();
     } catch (err) {
       alert(err.response?.data?.message || '❌ Registration failed');
@@ -165,22 +166,26 @@ const StudentEvents = () => {
     );
   };
 
+  const tabTitles = {
+    All: '🎉 All Events',
+    Upcoming: '📅 Upcoming Events',
+    Past: '⏳ Past Events',
+    Registered: '✅ Your Registered Events'
+  };
+
   return (
     <div>
       <Navbar />
 
       <div className="bg-gradient-to-r from-indigo-600 to-purple-600 py-16 text-white text-center relative">
-        <h1 className="text-4xl font-bold z-10 relative">
-          {activeTab === 'All' && '🎉 All Events'}
-          {activeTab === 'Upcoming' && '📅 Upcoming Events'}
-          {activeTab === 'Past' && '⏳ Past Events'}
-          {activeTab === 'Registered' && '✅ Your Registered Events'}
-        </h1>
-        <p className="italic text-yellow-300 mt-2 z-10 relative">Find & Register for Campus Events</p>
+        <h1 className="text-4xl font-bold z-10 relative">{tabTitles[activeTab]}</h1>
+        <p className="italic text-yellow-300 mt-2 z-10 relative">
+          Find & Register for Campus Events
+        </p>
       </div>
 
       <div className="flex justify-center mt-6 flex-wrap gap-4">
-        {['All', 'Upcoming', 'Past', 'Registered'].map(tab => (
+        {['All', 'Upcoming', 'Past', ...(user ? ['Registered'] : [])].map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}

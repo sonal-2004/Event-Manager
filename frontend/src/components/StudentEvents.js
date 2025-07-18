@@ -12,9 +12,15 @@ const StudentEvents = () => {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [filterType, setFilterType] = useState('');
+  const today = new Date();
 
   useEffect(() => {
-    checkAuth();
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      setIsAuthenticated(true);
+    } else {
+      checkAuth();
+    }
     fetchEvents();
     fetchRegisteredEvents();
   }, []);
@@ -23,8 +29,8 @@ const StudentEvents = () => {
     try {
       const res = await axios.get('/api/auth/check');
       setIsAuthenticated(res.data.authenticated);
-    } catch {
-      setIsAuthenticated(false);
+    } catch (err) {
+      console.error('Auth check failed:', err);
     }
   };
 
@@ -47,10 +53,15 @@ const StudentEvents = () => {
   };
 
   const handleRegister = async (eventId, eventTitle, isPastEvent) => {
-    if (isPastEvent) {
-      alert("⏳ You cannot register, the deadline has passed.");
-      return;
+    if (!isAuthenticated) {
+      sessionStorage.setItem("registerAfterLogin", eventId);
+      return window.location.href = "/login";
     }
+
+    if (isPastEvent) {
+      return alert("⏳ You cannot register, the deadline has passed.");
+    }
+
     try {
       await axios.post(`/api/student/register/${eventId}`);
       alert(`✅ Registered successfully for "${eventTitle}"`);
@@ -67,17 +78,21 @@ const StudentEvents = () => {
     }
   };
 
-  const today = new Date();
   const filteredEvents = events.filter(event => {
-    if (!filterType) return true;
     switch (filterType) {
-      case 'date': return new Date(event.date).toLocaleDateString() === today.toLocaleDateString();
-      case 'time': return true; // Add condition as needed
-      case 'type': return event.type?.toLowerCase().includes('');
-      case 'club': return event.club_name?.toLowerCase().includes('');
-      default: return true;
+      case 'date':
+        return new Date(event.date).toLocaleDateString() === today.toLocaleDateString();
+      case 'time':
+        return !!event.time;
+      case 'type':
+        return event.type?.toLowerCase().includes(''); // customize if needed
+      case 'club':
+        return event.club_name?.toLowerCase().includes(''); // customize if needed
+      default:
+        return true;
     }
   });
+
   const upcomingEvents = filteredEvents.filter(e => new Date(e.date) >= today);
   const pastEvents = filteredEvents.filter(e => new Date(e.date) < today);
   const registered = filteredEvents.filter(e => registeredEvents.some(r => r.id === e.id));
@@ -103,10 +118,10 @@ const StudentEvents = () => {
           e.stopPropagation();
           handleRegister(event.id, event.title, isPastEvent);
         }}
-        className={`mt-4 px-4 py-2 rounded transition text-white ${isPastEvent || registeredEvents.includes(event.id) ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-red-700'}`}
-        disabled={isPastEvent || registeredEvents.includes(event.id)}
+        className={`mt-4 px-4 py-2 rounded transition text-white ${isPastEvent || registeredEvents.some(r => r.id === event.id) ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-red-700'}`}
+        disabled={isPastEvent || registeredEvents.some(r => r.id === event.id)}
       >
-        {isPastEvent ? 'Registration Closed' : registeredEvents.includes(event.id) ? 'Registered' : 'Register'}
+        {isPastEvent ? 'Registration Closed' : registeredEvents.some(r => r.id === event.id) ? 'Registered' : 'Register'}
       </button>
     </div>
   );
@@ -120,36 +135,36 @@ const StudentEvents = () => {
         <p className="italic text-yellow-300">Discover, participate, and cherish every campus moment</p>
       </div>
 
-      {isAuthenticated ? (
+      <div className="flex flex-col items-center gap-4 my-8">
+        <select
+          value={filterType}
+          onChange={e => setFilterType(e.target.value)}
+          className="px-4 py-2 rounded border"
+        >
+          <option value="">Sort By</option>
+          <option value="date">Date</option>
+          <option value="time">Time</option>
+          <option value="club">Club</option>
+          <option value="type">Event Type</option>
+        </select>
+      </div>
+
+      <div className="text-center my-6">
+        <h2 className="text-3xl font-bold text-purple-700">Upcoming Events</h2>
+      </div>
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+        {upcomingEvents.length > 0 ? upcomingEvents.map(e => renderEventCard(e, false)) : <p>No upcoming events.</p>}
+      </div>
+
+      <div className="text-center my-6">
+        <h2 className="text-3xl font-bold text-purple-700">Past Events</h2>
+      </div>
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {pastEvents.length > 0 ? pastEvents.map(e => renderEventCard(e, true)) : <p>No past events.</p>}
+      </div>
+
+      {isAuthenticated && (
         <>
-          <div className="flex flex-col items-center gap-4 my-8">
-            <select
-              value={filterType}
-              onChange={e => setFilterType(e.target.value)}
-              className="px-4 py-2 rounded border"
-            >
-              <option value="">Sort By</option>
-              <option value="date">Date</option>
-              <option value="time">Time</option>
-              <option value="club">Club</option>
-              <option value="type">Event Type</option>
-            </select>
-          </div>
-
-          <div className="text-center my-6">
-            <h2 className="text-3xl font-bold text-purple-700">Upcoming Events</h2>
-          </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-            {upcomingEvents.length > 0 ? upcomingEvents.map(e => renderEventCard(e, false)) : <p>No upcoming events.</p>}
-          </div>
-
-          <div className="text-center my-6">
-            <h2 className="text-3xl font-bold text-purple-700">Past Events</h2>
-          </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {pastEvents.length > 0 ? pastEvents.map(e => renderEventCard(e, true)) : <p>No past events.</p>}
-          </div>
-
           <div className="text-center my-6">
             <h2 className="text-3xl font-bold text-purple-700">Registered Events</h2>
           </div>
@@ -157,10 +172,6 @@ const StudentEvents = () => {
             {registered.length > 0 ? registered.map(e => renderEventCard(e, false)) : <p>No registered events.</p>}
           </div>
         </>
-      ) : (
-        <div className="text-center my-20 text-red-600 text-xl">
-          Please <a href="/login" className="text-blue-500 underline">log in</a> to view and register for events.
-        </div>
       )}
 
       {selectedEvent && (

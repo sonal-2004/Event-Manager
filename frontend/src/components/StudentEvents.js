@@ -12,11 +12,13 @@ const StudentEvents = () => {
   const [activeTab, setActiveTab] = useState('All');
   const [filters, setFilters] = useState({ sortBy: '' });
 
+  // 🧠 Fetch user and events on load
   useEffect(() => {
     fetchUser();
     fetchEvents();
   }, []);
 
+  // 🔄 Handle redirects & registration logic
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const redirectAction = params.get('action');
@@ -56,10 +58,13 @@ const StudentEvents = () => {
     }
   };
 
+  // ✅ Deduping logic added here
   const fetchRegisteredEvents = async () => {
     try {
       const res = await axios.get('/api/events/registered');
-      setRegisteredEvents(res.data.events.map(ev => ev.id));
+      const ids = res.data.events.map(ev => ev.id);
+      const uniqueIds = [...new Set(ids)]; // Dedupe IDs
+      setRegisteredEvents(uniqueIds);
     } catch (err) {
       console.error('Error fetching registered events', err);
     }
@@ -70,10 +75,11 @@ const StudentEvents = () => {
       window.location.href = `/login?redirect=/events?action=register&eventId=${eventId}`;
       return;
     }
+
     try {
       const event = events.find(e => e.id === parseInt(eventId));
-      await axios.post(`/api/events/register/${eventId}`);
-      alert(`✅ Registered successfully for ${event?.title || 'event'}!`);
+      const res = await axios.post(`/api/events/register/${eventId}`);
+      alert(`✅ ${res.data.message || `Registered for ${event?.title || 'event'}!`}`);
       fetchRegisteredEvents();
     } catch (err) {
       alert(err.response?.data?.message || '❌ Registration failed');

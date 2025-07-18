@@ -44,7 +44,8 @@ router.post('/register/:eventId', isStudent, async (req, res) => {
 router.get('/all', async (req, res) => {
   try {
     const [events] = await db.query('SELECT * FROM events ORDER BY date ASC');
-    res.json(events);
+    res.json({ events }); // ✅ Now frontend receives { events: [...] }
+
   } catch (err) {
     console.error('❌ Error fetching events:', err.message);
     res.status(500).json({ message: 'Failed to retrieve events' });

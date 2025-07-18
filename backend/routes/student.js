@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 
-// ✅ Middleware: Check if the user is logged in as a student
+// ✅ Middleware: Check if student is logged in
 const isStudent = (req, res, next) => {
   if (!req.session.user || req.session.user.role !== 'student') {
     return res.status(401).json({ message: 'You must log in as a student' });
@@ -37,8 +37,18 @@ router.post('/register/:eventId', isStudent, async (req, res) => {
   }
 });
 
-// ✅ Route: Get event IDs the student is registered for
-// ✅ Route: Get FULL event details the student is registered for
+// ✅ Route: Get all events
+router.get('/all', isStudent, async (req, res) => {
+  try {
+    const [events] = await db.query('SELECT * FROM events ORDER BY date ASC');
+    res.json({ events }); // ✅ wrap in object
+  } catch (err) {
+    console.error('❌ Error fetching all events:', err.message);
+    res.status(500).json({ message: 'Failed to retrieve events' });
+  }
+});
+
+// ✅ Route: Get full details of registered events
 router.get('/registered', isStudent, async (req, res) => {
   try {
     const studentId = req.session.user.id;
@@ -52,23 +62,10 @@ router.get('/registered', isStudent, async (req, res) => {
       [studentId]
     );
 
-    res.json(rows);
+    res.json({ events: rows }); // ✅ wrap in object
   } catch (err) {
     console.error('❌ Error in /registered route:', err);
     res.status(500).json({ message: 'Internal server error' });
-  }
-});
-
-
-
-// ✅ Route: Fetch all events for students (used in StudentEvents.js)
-router.get('/all', isStudent, async (req, res) => {
-  try {
-    const [events] = await db.query('SELECT * FROM events ORDER BY date ASC');
-    res.json(events);
-  } catch (err) {
-    console.error('❌ Error fetching all events:', err.message);
-    res.status(500).json({ message: 'Failed to retrieve events' });
   }
 });
 

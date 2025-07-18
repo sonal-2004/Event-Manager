@@ -41,7 +41,7 @@ router.post('/register/:eventId', isStudent, async (req, res) => {
 });
 
 // ✅ Get all events
-router.get('/all', isStudent, async (req, res) => {
+router.get('/all', async (req, res) => {
   try {
     const [events] = await db.query('SELECT * FROM events ORDER BY date ASC');
     res.json(events);

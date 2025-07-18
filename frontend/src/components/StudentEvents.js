@@ -3,197 +3,154 @@ import axios from 'axios';
 import Navbar from '../components/navbar';
 
 axios.defaults.withCredentials = true;
+axios.defaults.baseURL = process.env.REACT_APP_API_URL;
 
 const StudentEvents = () => {
-  const [user, setUser] = useState(null);
   const [events, setEvents] = useState([]);
   const [registeredEvents, setRegisteredEvents] = useState([]);
-  const [filteredEvents, setFilteredEvents] = useState([]);
-  const [activeTab, setActiveTab] = useState('All');
-  const [filters, setFilters] = useState({
-    sortBy: '',
-  });
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [sortBy, setSortBy] = useState('');
+  const [activeTab, setActiveTab] = useState('all');
+  const [user, setUser] = useState(null);
+  const [header, setHeader] = useState('');
 
   useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const res = await axios.get('/auth/login/success');
+        setUser(res.data.user);
+      } catch (err) {
+        setUser(null);
+      }
+    };
+
+    const fetchEvents = async () => {
+      try {
+        const res = await axios.get('/events');
+        setEvents(res.data);
+      } catch (err) {
+        console.log(err);
+      }
+    };
+
+    const fetchRegisteredEvents = async () => {
+      if (user?.role === 'student') {
+        try {
+          const res = await axios.get(`/students/${user._id}/events`);
+          setRegisteredEvents(res.data);
+        } catch (err) {
+          console.log(err);
+        }
+      }
+    };
+
     fetchUser();
-  }, []);
-
-  useEffect(() => {
-    if (user !== null) fetchAllData();
+    fetchEvents();
+    fetchRegisteredEvents();
   }, [user]);
-
-  useEffect(() => {
-    filterEvents();
-  }, [activeTab, filters, events, registeredEvents]);
-
-  const fetchUser = async () => {
-    try {
-      const res = await axios.get('/api/auth/user');
-      setUser(res.data);
-    } catch (err) {
-      setUser(null);
-      fetchAllData(); // allow guests to view events
-    }
-  };
-
-  const fetchAllData = async () => {
-    try {
-      const [eventRes, registeredRes] = await Promise.all([
-        axios.get('/api/events/all'),
-        user ? axios.get('/api/events/registered') : Promise.resolve({ data: [] }),
-      ]);
-      setEvents(eventRes.data);
-      setRegisteredEvents(registeredRes.data.map(ev => ev.id));
-    } catch (err) {
-      console.error('Error loading data', err);
-    }
-  };
 
   const handleRegister = async (eventId) => {
     if (!user || user.role !== 'student') {
-      alert('Please log in as a student to register for events.');
       window.location.href = '/login';
       return;
     }
     try {
-      await axios.post(`/api/events/register/${eventId}`);
-      fetchAllData();
-      alert('Successfully registered!');
+      await axios.post(`/students/${user._id}/register/${eventId}`);
+      alert('Registered successfully');
+      const res = await axios.get(`/students/${user._id}/events`);
+      setRegisteredEvents(res.data);
     } catch (err) {
-      alert(err.response?.data?.message || 'Registration failed');
+      console.log(err);
     }
   };
 
   const filterEvents = () => {
-    const today = new Date();
-    let result = [...events];
+    let filtered = [...events];
 
-    if (activeTab === 'Upcoming') {
-      result = result.filter(e => new Date(e.date) >= today);
-    } else if (activeTab === 'Past') {
-      result = result.filter(e => new Date(e.date) < today);
-    } else if (activeTab === 'Registered') {
-      result = result.filter(e => registeredEvents.includes(e.id));
+    const now = new Date();
+
+    if (activeTab === 'upcoming') {
+      filtered = filtered.filter(event => new Date(event.date) >= now);
+    } else if (activeTab === 'past') {
+      filtered = filtered.filter(event => new Date(event.date) < now);
+    } else if (activeTab === 'registered') {
+      filtered = registeredEvents;
     }
 
-    if (filters.sortBy === 'Date') {
-      result.sort((a, b) => new Date(a.date) - new Date(b.date));
-    } else if (filters.sortBy === 'Time') {
-      result.sort((a, b) => a.time.localeCompare(b.time));
-    } else if (filters.sortBy === 'Club') {
-      result.sort((a, b) => a.club_name.localeCompare(b.club_name));
-    } else if (filters.sortBy === 'Type') {
-      result.sort((a, b) => a.event_type.localeCompare(b.event_type));
+    if (sortBy === 'date') {
+      filtered.sort((a, b) => new Date(a.date) - new Date(b.date));
+      setHeader('Sorted by Date');
+    } else if (sortBy === 'time') {
+      filtered.sort((a, b) => a.time.localeCompare(b.time));
+      setHeader('Sorted by Time');
+    } else if (sortBy === 'club') {
+      filtered.sort((a, b) => a.clubName.localeCompare(b.clubName));
+      setHeader('Sorted by Club Name');
+    } else if (sortBy === 'type') {
+      filtered.sort((a, b) => a.type.localeCompare(b.type));
+      setHeader('Sorted by Event Type');
+    } else {
+      setHeader('');
     }
 
-    setFilteredEvents(result);
+    return filtered;
   };
 
-  const renderEventCard = (event) => {
-    const isRegistered = registeredEvents.includes(event.id);
+  const renderEvents = () => {
+    const filtered = filterEvents();
+    if (filtered.length === 0) return <p>No events found.</p>;
+
     return (
-      <div
-        key={event.id}
-        className="bg-white rounded-lg shadow-lg shadow-purple-300 p-4 max-w-sm mx-auto flex flex-col hover:shadow-xl transition"
-      >
-        {event.poster && (
-          <img
-            src={event.poster}
-            alt="Poster"
-            className="rounded max-h-60 w-full object-cover mb-3"
-          />
-        )}
-        <h3 className="text-lg font-bold">{event.title}</h3>
-        <p>📅 {new Date(event.date).toLocaleDateString()} | 🕒 {event.time}</p>
-        <p>📍 {event.location}</p>
-        <p>🎓 {event.club_name} | 🏷️ {event.event_type}</p>
-        <p className="text-gray-700 mt-2 line-clamp-3">{event.description}</p>
-        <button
-          disabled={isRegistered}
-          onClick={() => handleRegister(event.id)}
-          className={`mt-4 px-4 py-2 rounded ${
-            isRegistered ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-red-700'
-          } text-white`}
-        >
-          {isRegistered ? 'Registered' : 'Register'}
-        </button>
-      </div>
+      <>
+        {header && <h3>{header}</h3>}
+        {filtered.map(event => {
+          const isRegistered = registeredEvents.some(e => e._id === event._id);
+          const isPast = new Date(event.date) < new Date();
+
+          return (
+            <div key={event._id} style={{ border: '1px solid #ccc', margin: '10px', padding: '10px' }}>
+              <h3>{event.name}</h3>
+              <p><b>Date:</b> {new Date(event.date).toLocaleDateString()}</p>
+              <p><b>Time:</b> {event.time}</p>
+              <p><b>Club:</b> {event.clubName}</p>
+              <p><b>Type:</b> {event.type}</p>
+              {isPast ? (
+                <button disabled style={{ backgroundColor: 'grey', color: 'white', cursor: 'not-allowed' }}>Deadline Gone</button>
+              ) : (
+                <button onClick={() => handleRegister(event._id)} disabled={isRegistered}>
+                  {isRegistered ? 'Already Registered' : 'Register'}
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </>
     );
   };
 
   return (
     <div>
       <Navbar />
-
-      <div className="relative bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-20 overflow-hidden text-center">
-        {Array.from({ length: 25 }).map((_, index) => (
-          <img
-            key={index}
-            src="/assets/starss.png"
-            alt="sparkle"
-            className="absolute w-4 h-4 sparkle pointer-events-none"
-            style={{
-              top: `${Math.random() * 100}%`,
-              left: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 5}s`,
-              animation: 'twinkle 2s infinite ease-in-out',
-            }}
-          />
-        ))}
-        <h1 className="relative z-10 text-4xl font-bold">🎉 Student Events Dashboard</h1>
-        <p className="mt-2 text-yellow-300 italic z-10 relative">Find & Register for Campus Events</p>
-        <div className="relative z-10 mt-6 flex justify-center gap-4 flex-wrap">
-          <img src="/images/event-left.png" alt="img1" className="h-32 w-48 rounded-xl shadow-lg object-cover" />
-          <img src="/images/event-right.jpg" alt="img2" className="h-32 w-48 rounded-xl shadow-lg object-cover" />
-          <img src="/images/event-mid.jpg" alt="img3" className="h-32 w-48 rounded-xl shadow-lg object-cover" />
-        </div>
+      <h1>Events</h1>
+      <div style={{ marginBottom: '20px' }}>
+        <button onClick={() => setActiveTab('all')}>All Events</button>
+        <button onClick={() => setActiveTab('upcoming')}>Upcoming Events</button>
+        <button onClick={() => setActiveTab('past')}>Past Events</button>
+        <button onClick={() => setActiveTab('registered')}>Registered Events</button>
       </div>
-
-      <div className="flex justify-center gap-4 my-6">
-        {['All', 'Upcoming', 'Past', 'Registered'].map((tab) => (
-          <button
-            key={tab}
-            className={`px-5 py-2 rounded-full font-medium ${
-              activeTab === tab ? 'bg-purple-600 text-white' : 'bg-gray-200 text-gray-700'
-            }`}
-            onClick={() => setActiveTab(tab)}
-          >
-            {tab}
-          </button>
-        ))}
-      </div>
-
-      <div className="flex justify-center gap-4 px-4 mb-6">
-        <select
-          className="border px-3 py-1 rounded"
-          onChange={(e) => setFilters({ ...filters, sortBy: e.target.value })}
-        >
-          <option value="">Sort By</option>
-          <option value="Date">Date</option>
-          <option value="Time">Time</option>
-          <option value="Club">Club</option>
-          <option value="Type">Type</option>
+      <div>
+        <label>Sort By:&nbsp;</label>
+        <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+          <option value="">-- Select --</option>
+          <option value="date">Date</option>
+          <option value="time">Time</option>
+          <option value="club">Club Name</option>
+          <option value="type">Event Type</option>
         </select>
       </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 px-4 mb-10">
-        {filteredEvents.length ? (
-          filteredEvents.map(renderEventCard)
-        ) : (
-          <p className="text-center col-span-3 text-gray-500">No events found.</p>
-        )}
+      <div>
+        {renderEvents()}
       </div>
-
-      <footer className="bg-purple-800 text-white py-6 text-center">
-        &copy; {new Date().getFullYear()} Student Events Portal. All rights reserved.
-      </footer>
-
-      <style>{`
-        @keyframes twinkle {
-          0%, 100% { opacity: 0.2; transform: scale(1); }
-          50% { opacity: 1; transform: scale(1.4); }
-        }
-      `}</style>
     </div>
   );
 };

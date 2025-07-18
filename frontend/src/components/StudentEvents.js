@@ -1,177 +1,229 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import Navbar from '../components/navbar';
-import { useNavigate, useLocation } from 'react-router-dom';
 
 axios.defaults.withCredentials = true;
-axios.defaults.baseURL = process.env.REACT_APP_API_URL;
 
 const StudentEvents = () => {
+  const [user, setUser] = useState(null);
   const [events, setEvents] = useState([]);
   const [registeredEvents, setRegisteredEvents] = useState([]);
-  const [selectedEvent, setSelectedEvent] = useState(null);
-  const [sortOrder, setSortOrder] = useState('upcoming');
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const navigate = useNavigate();
-  const location = useLocation();
+  const [groupedEvents, setGroupedEvents] = useState({});
+  const [activeTab, setActiveTab] = useState('All');
+  const [filters, setFilters] = useState({ sortBy: '' });
 
   useEffect(() => {
-    const fetchLoginStatus = async () => {
-      try {
-        const res = await axios.get('/student/check');
-        setIsLoggedIn(res.data.loggedIn);
-      } catch (err) {
-        setIsLoggedIn(false);
-      }
-    };
-
-    const fetchEvents = async () => {
-      try {
-        const res = await axios.get('/student/get-events');
-        setEvents(res.data.events || []);
-      } catch (err) {
-        console.error(err);
-      }
-    };
-
-    fetchLoginStatus();
+    fetchUser();
     fetchEvents();
   }, []);
 
-  const handleEventClick = (event) => {
-    setSelectedEvent(event);
-  };
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const redirectAction = params.get('action');
+    const eventId = params.get('eventId');
+    const tab = params.get('tab');
 
-  const handleBack = () => {
-    setSelectedEvent(null);
-  };
-
-  const handleRegister = async (eventId) => {
-    if (!isLoggedIn) {
-      navigate(`/login?redirect=events`);
-      return;
+    if (user && user.role === 'student') {
+      fetchRegisteredEvents().then(() => {
+        if (redirectAction === 'register' && eventId) {
+          handleRegister(eventId);
+        } else if (tab === 'registered') {
+          setActiveTab('Registered');
+        }
+      });
     }
+  }, [user]);
 
+  useEffect(() => {
+    filterAndGroupEvents();
+  }, [activeTab, filters, events, registeredEvents]);
+
+  const fetchUser = async () => {
     try {
-      await axios.post('/student/register', { eventId });
-      alert('✅ Successfully registered!');
+      const res = await axios.get('/api/auth/user');
+      setUser(res.data);
+    } catch {
+      setUser(null);
+    }
+  };
+
+  const fetchEvents = async () => {
+    try {
+      const res = await axios.get('/api/events/all');
+      setEvents(res.data);
     } catch (err) {
-      alert('⚠️ Already registered or error occurred.');
+      console.error('Error fetching events', err);
     }
   };
 
   const fetchRegisteredEvents = async () => {
-    if (!isLoggedIn) {
-      navigate('/login?redirect=events');
-      return;
-    }
-
     try {
-      const res = await axios.get('/student/registered-events');
-      setRegisteredEvents(res.data.events || []);
-      setSortOrder('registered');
+      const res = await axios.get('/api/events/registered');
+      setRegisteredEvents(res.data.map(ev => ev.id));
     } catch (err) {
-      console.error(err);
+      console.error('Error fetching registered events', err);
     }
   };
 
-  const sortEvents = () => {
-    const now = new Date();
+  const handleRegister = async (eventId) => {
+    if (!user || user.role !== 'student') {
+      window.location.href = `/login?redirect=/events?action=register&eventId=${eventId}`;
+      return;
+    }
+    try {
+      await axios.post(`/api/events/register/${eventId}`);
+      alert('✅ Successfully registered! Check your email for confirmation.');
+      fetchRegisteredEvents();
+    } catch (err) {
+      alert(err.response?.data?.message || '❌ Registration failed');
+    }
+  };
 
-    if (sortOrder === 'registered') return registeredEvents;
+  const filterAndGroupEvents = () => {
+    const today = new Date();
+    let filtered = [...events];
 
-    return events
-      .filter((event) => {
-        const eventDate = new Date(event.date);
-        return sortOrder === 'upcoming'
-          ? eventDate >= now
-          : eventDate < now;
-      })
-      .sort((a, b) => new Date(a.date) - new Date(b.date));
+    if (activeTab === 'Upcoming') {
+      filtered = filtered.filter(e => new Date(e.date) >= today);
+    } else if (activeTab === 'Past') {
+      filtered = filtered.filter(e => new Date(e.date) < today);
+    } else if (activeTab === 'Registered') {
+      if (!user || user.role !== 'student') {
+        window.location.href = `/login?redirect=/events?tab=registered`;
+        return;
+      }
+      filtered = filtered.filter(e => registeredEvents.includes(e.id));
+    }
+
+    let grouped = {};
+    if (filters.sortBy === 'Date') {
+      filtered.sort((a, b) => new Date(a.date) - new Date(b.date));
+      grouped = groupBy(filtered, e => new Date(e.date).toLocaleDateString());
+    } else if (filters.sortBy === 'Time') {
+      filtered.sort((a, b) => a.time.localeCompare(b.time));
+      grouped = groupBy(filtered, e => e.time);
+    } else if (filters.sortBy === 'Club') {
+      filtered.sort((a, b) => a.club_name.localeCompare(b.club_name));
+      grouped = groupBy(filtered, e => e.club_name);
+    } else if (filters.sortBy === 'Type') {
+      filtered.sort((a, b) => a.event_type.localeCompare(b.event_type));
+      grouped = groupBy(filtered, e => e.event_type);
+    } else {
+      grouped = { 'All Events': filtered };
+    }
+
+    setGroupedEvents(grouped);
+  };
+
+  const groupBy = (arr, keyGetter) => {
+    return arr.reduce((acc, item) => {
+      const key = keyGetter(item);
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(item);
+      return acc;
+    }, {});
+  };
+
+  const renderEventCard = (event) => {
+    const isRegistered = registeredEvents.includes(event.id);
+    const isPast = new Date(event.date) < new Date();
+
+    return (
+      <div key={event.id} className="bg-white rounded-lg shadow p-4">
+        {event.poster && (
+          <img
+            src={event.poster}
+            alt="Poster"
+            className="rounded mb-2 w-full h-40 object-cover object-center"
+          />
+        )}
+        <h3 className="text-lg font-bold">{event.title}</h3>
+        <p>📅 {new Date(event.date).toLocaleDateString()} | 🕒 {event.time}</p>
+        <p>📍 {event.location}</p>
+        <p>🎓 {event.club_name} | 🏷️ {event.event_type}</p>
+        <p className="mt-2 text-gray-700 line-clamp-3">{event.description}</p>
+
+        {isPast ? (
+          <button className="bg-gray-500 text-white py-1 px-4 rounded mt-4 cursor-not-allowed" disabled>
+            Deadline Gone
+          </button>
+        ) : isRegistered ? (
+          <button className="bg-green-500 text-white py-1 px-4 rounded mt-4" disabled>
+            Registered
+          </button>
+        ) : (
+          <button
+            onClick={() => handleRegister(event.id)}
+            className="bg-blue-600 hover:bg-blue-700 text-white py-1 px-4 rounded mt-4"
+          >
+            Register
+          </button>
+        )}
+      </div>
+    );
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div>
       <Navbar />
-      <div className="max-w-6xl mx-auto py-8 px-4">
-        {!selectedEvent ? (
-          <>
-            <h1 className="text-4xl font-bold mb-6 text-center text-indigo-600">Events</h1>
 
-            <div className="flex justify-center gap-4 mb-6">
-              <button
-                className={`px-4 py-2 rounded-full font-medium ${
-                  sortOrder === 'upcoming' ? 'bg-indigo-600 text-white' : 'bg-gray-200'
-                }`}
-                onClick={() => setSortOrder('upcoming')}
-              >
-                Upcoming
-              </button>
-              <button
-                className={`px-4 py-2 rounded-full font-medium ${
-                  sortOrder === 'past' ? 'bg-indigo-600 text-white' : 'bg-gray-200'
-                }`}
-                onClick={() => setSortOrder('past')}
-              >
-                Past
-              </button>
-              <button
-                className={`px-4 py-2 rounded-full font-medium ${
-                  sortOrder === 'registered' ? 'bg-indigo-600 text-white' : 'bg-gray-200'
-                }`}
-                onClick={fetchRegisteredEvents}
-              >
-                Registered
-              </button>
-            </div>
+      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 py-16 text-white text-center relative">
+        <h1 className="text-4xl font-bold z-10 relative">
+          {activeTab === 'All' && '🎉 All Events'}
+          {activeTab === 'Upcoming' && '📅 Upcoming Events'}
+          {activeTab === 'Past' && '⏳ Past Events'}
+          {activeTab === 'Registered' && '✅ Your Registered Events'}
+        </h1>
+        <p className="italic text-yellow-300 mt-2 z-10 relative">Find & Register for Campus Events</p>
+      </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-              {sortEvents().map((event) => (
-                <div
-                  key={event._id}
-                  className="bg-white shadow-md rounded-lg p-4 cursor-pointer hover:shadow-xl transition"
-                  onClick={() => handleEventClick(event)}
-                >
-                  <img
-                    src={event.poster}
-                    alt="Poster"
-                    className="rounded mb-2 w-full h-48 object-contain"
-                  />
-                  <h2 className="text-xl font-semibold text-gray-800">{event.name}</h2>
-                  <p className="text-gray-500">{new Date(event.date).toLocaleDateString()}</p>
-                </div>
-              ))}
+      <div className="flex justify-center mt-6 flex-wrap gap-4">
+        {['All', 'Upcoming', 'Past', 'Registered'].map(tab => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`px-4 py-2 rounded-full ${
+              activeTab === tab ? 'bg-purple-600 text-white' : 'bg-gray-200 text-gray-700'
+            }`}
+          >
+            {tab === 'All' ? 'All Events' : `${tab} Events`}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex justify-center mt-4 mb-6">
+        <select
+          className="border px-3 py-1 rounded"
+          onChange={e => setFilters({ ...filters, sortBy: e.target.value })}
+        >
+          <option value="">Sort By</option>
+          <option value="Date">Date</option>
+          <option value="Time">Time</option>
+          <option value="Club">Club</option>
+          <option value="Type">Type</option>
+        </select>
+      </div>
+
+      <div className="px-6">
+        {Object.keys(groupedEvents).length ? (
+          Object.entries(groupedEvents).map(([group, list]) => (
+            <div key={group} className="mb-10">
+              <h2 className="text-xl font-semibold mb-3 text-gray-800">
+                {filters.sortBy ? `🗂 ${filters.sortBy}: ${group}` : group}
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {list.map(renderEventCard)}
+              </div>
             </div>
-          </>
+          ))
         ) : (
-          <div className="bg-white shadow-xl rounded-lg p-6 max-w-xl mx-auto">
-            <img
-              src={selectedEvent.poster}
-              alt="Poster"
-              className="rounded mb-4 w-full h-64 object-contain"
-            />
-            <h2 className="text-3xl font-bold mb-2 text-indigo-700">{selectedEvent.name}</h2>
-            <p className="text-gray-600 mb-1">📅 {new Date(selectedEvent.date).toLocaleDateString()}</p>
-            <p className="text-gray-700 mb-4">{selectedEvent.description}</p>
-            <p className="text-sm text-gray-500 mb-6">ID: {selectedEvent._id}</p>
-
-            <div className="flex justify-between">
-              <button
-                className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
-                onClick={() => handleRegister(selectedEvent._id)}
-              >
-                Register
-              </button>
-              <button
-                className="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400"
-                onClick={handleBack}
-              >
-                Back
-              </button>
-            </div>
-          </div>
+          <p className="text-center text-gray-500">No events found.</p>
         )}
       </div>
+
+      <footer className="bg-purple-800 text-white py-6 text-center">
+        &copy; {new Date().getFullYear()} Student Events Portal. All rights reserved.
+      </footer>
     </div>
   );
 };

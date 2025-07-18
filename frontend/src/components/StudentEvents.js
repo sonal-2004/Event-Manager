@@ -8,10 +8,10 @@ axios.defaults.baseURL = process.env.REACT_APP_API_URL;
 const StudentEvents = () => {
   const [events, setEvents] = useState([]);
   const [registeredEvents, setRegisteredEvents] = useState([]);
-  const [selectedTab, setSelectedTab] = useState('upcoming');
+  const [selectedTab, setSelectedTab] = useState('all');
   const [sortOption, setSortOption] = useState('');
   const [selectedEvent, setSelectedEvent] = useState(null);
-  const [isLoggedIn, setIsLoggedIn] = useState(null); // null means "checking"
+  const [isLoggedIn, setIsLoggedIn] = useState(null); // null = checking
 
   useEffect(() => {
     fetchEvents();
@@ -35,8 +35,7 @@ const StudentEvents = () => {
       } else {
         setIsLoggedIn(false);
       }
-    } catch (err) {
-      console.error("Login check failed:", err);
+    } catch {
       setIsLoggedIn(false);
     }
   };
@@ -82,8 +81,8 @@ const StudentEvents = () => {
   const today = new Date();
   const isPast = (date) => new Date(date) < today;
 
-  const sortEvents = (eventsList) => {
-    return [...eventsList].sort((a, b) => {
+  const sortEvents = (list) => {
+    return [...list].sort((a, b) => {
       switch (sortOption) {
         case 'date': return new Date(a.date) - new Date(b.date);
         case 'time': return a.time.localeCompare(b.time);
@@ -94,31 +93,44 @@ const StudentEvents = () => {
     });
   };
 
-  const filteredEvents = {
-    all: sortEvents(events),
-    upcoming: sortEvents(events.filter(e => !isPast(e.date))),
-    past: sortEvents(events.filter(e => isPast(e.date))),
-    registered: isLoggedIn
-      ? sortEvents(events.filter(e => registeredEvents.includes(e.id)))
-      : [],
+  const getFilteredEvents = () => {
+    let base = [];
+
+    if (!isLoggedIn) {
+      base = events;
+    } else {
+      switch (selectedTab) {
+        case 'upcoming':
+          base = events.filter(e => !isPast(e.date));
+          break;
+        case 'past':
+          base = events.filter(e => isPast(e.date));
+          break;
+        case 'registered':
+          base = events.filter(e => registeredEvents.includes(e.id));
+          break;
+        default:
+          base = events;
+      }
+    }
+
+    return sortEvents(base);
   };
 
-  const getSectionTitle = () => {
-    switch (selectedTab) {
-      case 'upcoming': return 'Upcoming Events';
-      case 'past': return 'Past Events';
-      case 'registered': return 'Your Registered Events';
-      default: return 'All Events';
-    }
-  };
+  const groupedEvents = () => {
+    const list = getFilteredEvents();
 
-  const handleTabChange = (tab) => {
-    if (tab === 'registered' && !isLoggedIn) {
-      alert("⚠️ Please log in to view your registered events.");
-      window.location.href = "/login";
-      return;
-    }
-    setSelectedTab(tab);
+    if (!sortOption) return { '': list };
+
+    return list.reduce((groups, event) => {
+      const key =
+        sortOption === 'date'
+          ? new Date(event.date).toLocaleDateString()
+          : event[sortOption] || 'Unknown';
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(event);
+      return groups;
+    }, {});
   };
 
   const renderEventCard = (event) => {
@@ -158,28 +170,30 @@ const StudentEvents = () => {
     );
   };
 
+  const renderTabs = () => {
+    const tabs = isLoggedIn ? ['all', 'upcoming', 'past', 'registered'] : ['all'];
+    return tabs.map(tab => (
+      <button
+        key={tab}
+        onClick={() => setSelectedTab(tab)}
+        className={`px-4 py-2 rounded-full border ${selectedTab === tab ? 'bg-purple-600 text-white' : 'bg-gray-100'}`}
+      >
+        {tab.charAt(0).toUpperCase() + tab.slice(1)} Events
+      </button>
+    ));
+  };
+
   return (
     <div>
       <Navbar />
 
-      {/* Header */}
       <div className="relative bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-20 text-center">
-        <h1 className="text-4xl font-bold mb-2">{getSectionTitle()}</h1>
+        <h1 className="text-4xl font-bold mb-2">Student Events</h1>
         <p className="italic text-yellow-300">Find & Register for Campus Events</p>
       </div>
 
       {/* Tabs */}
-      <div className="flex justify-center my-6 gap-2 flex-wrap">
-        {['all', 'upcoming', 'past', 'registered'].map(tab => (
-          <button
-            key={tab}
-            onClick={() => handleTabChange(tab)}
-            className={`px-4 py-2 rounded-full border ${selectedTab === tab ? 'bg-purple-600 text-white' : 'bg-gray-100'}`}
-          >
-            {tab.charAt(0).toUpperCase() + tab.slice(1)} Events
-          </button>
-        ))}
-      </div>
+      <div className="flex justify-center my-6 gap-2 flex-wrap">{renderTabs()}</div>
 
       {/* Sort Filter */}
       <div className="flex justify-end items-center px-4 mb-4">
@@ -192,17 +206,23 @@ const StudentEvents = () => {
           <option value="">None</option>
           <option value="date">Date</option>
           <option value="time">Time</option>
-          <option value="type">Event Type</option>
-          <option value="club">Club Name</option>
+          <option value="eventType">Event Type</option>
+          <option value="club_name">Club Name</option>
         </select>
       </div>
 
-      {/* Events Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 px-4 mb-16">
-        {filteredEvents[selectedTab]?.length > 0 ? (
-          filteredEvents[selectedTab].map(event => renderEventCard(event))
-        ) : (
-          <p className="text-center col-span-full">No events to display.</p>
+      {/* Grouped Events */}
+      <div className="px-4 mb-16 space-y-6">
+        {Object.entries(groupedEvents()).map(([group, list]) => (
+          <div key={group}>
+            {sortOption && <h2 className="text-xl font-semibold mb-3">{group}</h2>}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {list.map(event => renderEventCard(event))}
+            </div>
+          </div>
+        ))}
+        {!Object.values(groupedEvents()).flat().length && (
+          <p className="text-center text-gray-500">No events to display.</p>
         )}
       </div>
 
@@ -220,13 +240,7 @@ const StudentEvents = () => {
               <img src={selectedEvent.poster} alt="Poster" className="rounded mb-4 max-h-60 object-contain mx-auto" />
             )}
             <h2 className="text-xl font-bold mb-2">{selectedEvent.title}</h2>
-            <p>
-              📅 {new Date(selectedEvent.date).toLocaleDateString()} | 🕒{' '}
-              {new Date('1970-01-01T' + selectedEvent.time).toLocaleTimeString([], {
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
-            </p>
+            <p>📅 {new Date(selectedEvent.date).toLocaleDateString()} | 🕒 {new Date('1970-01-01T' + selectedEvent.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
             <p>📍 {selectedEvent.location}</p>
             <p>🎓 {selectedEvent.club_name}</p>
             <div className="mt-3 text-gray-700 whitespace-pre-line">{selectedEvent.description}</div>

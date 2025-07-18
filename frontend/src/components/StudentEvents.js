@@ -15,12 +15,16 @@ const StudentEvents = () => {
     time: '',
     club_name: '',
     event_type: '',
+    sortBy: '',
   });
 
   useEffect(() => {
     fetchUser();
-    fetchAllData();
   }, []);
+
+  useEffect(() => {
+    if (user) fetchAllData();
+  }, [user]);
 
   useEffect(() => {
     filterEvents();
@@ -29,7 +33,7 @@ const StudentEvents = () => {
   const fetchUser = async () => {
     try {
       const res = await axios.get('/api/auth/user');
-      setUser(res.data); // { role: 'student', name: '...' }
+      setUser(res.data);
     } catch (err) {
       setUser(null);
     }
@@ -80,6 +84,13 @@ const StudentEvents = () => {
     if (filters.club_name) result = result.filter(e => e.club_name === filters.club_name);
     if (filters.event_type) result = result.filter(e => e.event_type === filters.event_type);
 
+    // Sort by date or time if selected
+    if (filters.sortBy === 'date') {
+      result.sort((a, b) => new Date(a.date) - new Date(b.date));
+    } else if (filters.sortBy === 'time') {
+      result.sort((a, b) => a.time.localeCompare(b.time));
+    }
+
     setFilteredEvents(result);
   };
 
@@ -121,7 +132,6 @@ const StudentEvents = () => {
     <div>
       <Navbar />
 
-      {/* Header with sparkle animation and images */}
       <div className="relative bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-20 overflow-hidden text-center">
         {Array.from({ length: 25 }).map((_, index) => (
           <img
@@ -146,7 +156,6 @@ const StudentEvents = () => {
         </div>
       </div>
 
-      {/* Tabs */}
       <div className="flex justify-center gap-4 my-6">
         {['All', 'Upcoming', 'Past', 'Registered'].map((tab) => (
           <button
@@ -161,47 +170,39 @@ const StudentEvents = () => {
         ))}
       </div>
 
-      {/* Filters */}
+      {/* Filters and Sorting */}
       <div className="flex flex-wrap justify-center gap-4 px-4 mb-6">
-        <select
-          className="border px-3 py-1 rounded"
-          onChange={(e) => setFilters({ ...filters, date: e.target.value })}
-        >
+        <select className="border px-3 py-1 rounded" onChange={(e) => setFilters({ ...filters, date: e.target.value })}>
           <option value="">Date</option>
           {uniqueValues('date').map((d, i) => (
             <option key={i} value={d}>{d}</option>
           ))}
         </select>
-        <select
-          className="border px-3 py-1 rounded"
-          onChange={(e) => setFilters({ ...filters, time: e.target.value })}
-        >
+        <select className="border px-3 py-1 rounded" onChange={(e) => setFilters({ ...filters, time: e.target.value })}>
           <option value="">Time</option>
           {uniqueValues('time').map((t, i) => (
             <option key={i} value={t}>{t}</option>
           ))}
         </select>
-        <select
-          className="border px-3 py-1 rounded"
-          onChange={(e) => setFilters({ ...filters, club_name: e.target.value })}
-        >
+        <select className="border px-3 py-1 rounded" onChange={(e) => setFilters({ ...filters, club_name: e.target.value })}>
           <option value="">Club</option>
           {uniqueValues('club_name').map((c, i) => (
             <option key={i} value={c}>{c}</option>
           ))}
         </select>
-        <select
-          className="border px-3 py-1 rounded"
-          onChange={(e) => setFilters({ ...filters, event_type: e.target.value })}
-        >
+        <select className="border px-3 py-1 rounded" onChange={(e) => setFilters({ ...filters, event_type: e.target.value })}>
           <option value="">Type</option>
           {uniqueValues('event_type').map((type, i) => (
             <option key={i} value={type}>{type}</option>
           ))}
         </select>
+        <select className="border px-3 py-1 rounded" onChange={(e) => setFilters({ ...filters, sortBy: e.target.value })}>
+          <option value="">Sort By</option>
+          <option value="date">Date</option>
+          <option value="time">Time</option>
+        </select>
       </div>
 
-      {/* Events */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 px-4 mb-10">
         {filteredEvents.length ? (
           filteredEvents.map(renderEventCard)
@@ -210,12 +211,10 @@ const StudentEvents = () => {
         )}
       </div>
 
-      {/* Footer */}
       <footer className="bg-purple-800 text-white py-6 text-center">
         &copy; {new Date().getFullYear()} Student Events Portal. All rights reserved.
       </footer>
 
-      {/* Sparkle Animation */}
       <style>{`
         @keyframes twinkle {
           0%, 100% { opacity: 0.2; transform: scale(1); }

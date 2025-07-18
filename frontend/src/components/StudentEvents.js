@@ -1,221 +1,209 @@
+// StudentEvents.jsx
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import Navbar from '../components/navbar';
 
 axios.defaults.withCredentials = true;
+axios.defaults.baseURL = process.env.REACT_APP_API_URL;
 
 const StudentEvents = () => {
-  const [user, setUser] = useState(null);
   const [events, setEvents] = useState([]);
   const [registeredEvents, setRegisteredEvents] = useState([]);
-  const [groupedEvents, setGroupedEvents] = useState({});
-  const [activeTab, setActiveTab] = useState('All');
-  const [filters, setFilters] = useState({ sortBy: '' });
+  const [selectedEvent, setSelectedEvent] = useState(null);
 
   useEffect(() => {
-    fetchUser();
     fetchEvents();
+    fetchRegisteredEvents();
   }, []);
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const redirectAction = params.get('action');
-    const eventId = params.get('eventId');
-    const tab = params.get('tab');
-
-    if (user?.role === 'student') {
-      fetchRegisteredEvents().then(() => {
-        if (redirectAction === 'register' && eventId) {
-          handleRegister(eventId);
-        } else if (tab === 'registered') {
-          setActiveTab('Registered');
-        }
-      });
-    }
-  }, [user]);
-
-  useEffect(() => {
-    filterAndGroupEvents();
-  }, [activeTab, filters, events, registeredEvents]);
-
-  const fetchUser = async () => {
-    try {
-      const res = await axios.get('/api/auth/user');
-      setUser(res.data);
-    } catch {
-      setUser(null);
-    }
-  };
 
   const fetchEvents = async () => {
     try {
       const res = await axios.get('/api/events/all');
-      console.log('Events:', res.data);
-      setEvents(res.data.events || []);
-    } catch (err) {
-      console.error('Error fetching events', err);
+      setEvents(res.data);
+    } catch (error) {
+      console.error('Failed to fetch events:', error);
     }
   };
 
   const fetchRegisteredEvents = async () => {
     try {
-      const res = await axios.get('/api/events/registered');
-      const registeredIds = res.data.events.map(ev => ev.id); // adjust if structure is different
-      setRegisteredEvents(registeredIds);
-      console.log('Registered Events:', registeredIds);
-    } catch (err) {
-      console.error('Error fetching registered events', err);
+      const res = await axios.get('/api/student/registered');
+      setRegisteredEvents(res.data);
+    } catch (error) {
+      console.error('Failed to fetch registrations:', error);
     }
   };
 
-  const handleRegister = async (eventId) => {
-    if (!user || user.role !== 'student') {
-      window.location.href = `/login?redirect=/events?action=register&eventId=${eventId}`;
+  const handleRegister = async (eventId, eventTitle, isPastEvent) => {
+    if (isPastEvent) {
+      alert("⏳ You cannot register, the deadline has passed.");
       return;
     }
 
     try {
-      const res = await axios.post(`/api/events/register/${eventId}`);
-      alert(`✅ ${res.data.message || 'Registered successfully!'}`);
+      await axios.post(`/api/student/register/${eventId}`);
+      alert(`✅ Registered successfully for "${eventTitle}"`);
       fetchRegisteredEvents();
-    } catch (err) {
-      alert(err.response?.data?.message || '❌ Registration failed');
+    } catch (error) {
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        sessionStorage.setItem("registerAfterLogin", eventId);
+        window.location.href = "/login";
+      } else if (error.response?.status === 400) {
+        alert("ℹ️ You are already registered for this event.");
+      } else {
+        alert("❌ Registration failed.");
+      }
     }
   };
 
-  const filterAndGroupEvents = () => {
-    const today = new Date();
-    let filtered = [...events];
+  const today = new Date();
+  const upcomingEvents = events.filter(e => new Date(e.date) >= today);
+  const pastEvents = events.filter(e => new Date(e.date) < today);
 
-    if (activeTab === 'Upcoming') {
-      filtered = filtered.filter(e => new Date(e.date) >= today);
-    } else if (activeTab === 'Past') {
-      filtered = filtered.filter(e => new Date(e.date) < today);
-    } else if (activeTab === 'Registered') {
-      filtered = filtered.filter(e => registeredEvents.includes(e.id));
-    }
-
-    let grouped = {};
-    if (filters.sortBy === 'Date') {
-      filtered.sort((a, b) => new Date(a.date) - new Date(b.date));
-      grouped = groupBy(filtered, e => new Date(e.date).toLocaleDateString());
-    } else if (filters.sortBy === 'Time') {
-      filtered.sort((a, b) => a.time.localeCompare(b.time));
-      grouped = groupBy(filtered, e => e.time);
-    } else if (filters.sortBy === 'Club') {
-      filtered.sort((a, b) => a.club_name.localeCompare(b.club_name));
-      grouped = groupBy(filtered, e => e.club_name);
-    } else if (filters.sortBy === 'Type') {
-      filtered.sort((a, b) => a.event_type.localeCompare(b.event_type));
-      grouped = groupBy(filtered, e => e.event_type);
-    } else {
-      grouped = { 'All Events': filtered };
-    }
-
-    setGroupedEvents(grouped);
-  };
-
-  const groupBy = (arr, keyGetter) => {
-    return arr.reduce((acc, item) => {
-      const key = keyGetter(item);
-      if (!acc[key]) acc[key] = [];
-      acc[key].push(item);
-      return acc;
-    }, {});
-  };
-
-  const renderEventCard = (event) => {
-    const isRegistered = registeredEvents.includes(event.id);
-    const isPast = new Date(event.date) < new Date();
-
-    return (
-      <div key={event.id} className="bg-white rounded-lg shadow p-4">
+  const renderEventCard = (event, isPastEvent = false) => (
+    <div
+      key={event.id}
+      className="bg-white border rounded-lg shadow-lg shadow-purple-300 p-4 w-full max-w-sm mx-auto flex flex-col justify-between cursor-pointer hover:shadow-xl transition"
+      onClick={() => setSelectedEvent(event)}
+    >
+      <div>
         {event.poster && (
-          <img src={event.poster} alt="Poster" className="w-full h-48 object-contain mb-3 rounded" />
+          <img
+            src={event.poster}
+            alt="Poster"
+            className="rounded mt-2 max-h-60 object-contain w-full mx-auto"
+          />
         )}
-        <h3 className="text-lg font-bold">{event.title}</h3>
-        <p>📅 {new Date(event.date).toLocaleDateString()} | 🕒 {event.time}</p>
-        <p>📍 {event.location}</p>
-        <p>🎓 {event.club_name} | 🏷️ {event.event_type}</p>
-        <p className="text-gray-700 mt-2 line-clamp-3">{event.description}</p>
-
-        {isPast ? (
-          <button className="bg-gray-400 text-white px-4 py-1 rounded mt-3" disabled>Deadline Gone</button>
-        ) : isRegistered ? (
-          <button className="bg-green-500 text-white px-4 py-1 rounded mt-3" disabled>Registered</button>
-        ) : (
-          <button
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1 rounded mt-3"
-            onClick={() => handleRegister(event.id)}
-          >
-            Register
-          </button>
-        )}
+        <h3 className="text-lg font-bold mt-2">{event.title}</h3>
+        <p>
+          📅 {new Date(event.date).toLocaleDateString()} | 🕒{' '}
+          {new Date('1970-01-01T' + event.time).toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit',
+          })}
+        </p>
+        <p>📍 Location: {event.location}</p>
+        <p>🎓 Organized By: {event.club_name}</p>
+        <p className="mt-2 text-gray-700 line-clamp-3 overflow-hidden h-[4.5em]">
+          {event.description}
+        </p>
       </div>
-    );
-  };
-
-  const tabHeaders = {
-    All: '🎉 All Events',
-    Upcoming: '📅 Upcoming Events',
-    Past: '⏳ Past Events',
-    Registered: '✅ Your Registered Events'
-  };
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          handleRegister(event.id, event.title, isPastEvent);
+        }}
+        className={`mt-4 px-4 py-2 rounded transition text-white ${
+          isPastEvent || registeredEvents.includes(event.id)
+            ? 'bg-gray-400 cursor-not-allowed'
+            : 'bg-blue-600 hover:bg-red-700'
+        }`}
+        disabled={isPastEvent || registeredEvents.includes(event.id)}
+      >
+        {isPastEvent
+          ? 'Registration Closed'
+          : registeredEvents.includes(event.id)
+          ? 'Registered'
+          : 'Register'}
+      </button>
+    </div>
+  );
 
   return (
     <div>
       <Navbar />
 
-      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 py-16 text-white text-center">
-        <h1 className="text-4xl font-bold">{tabHeaders[activeTab]}</h1>
-        <p className="italic text-yellow-300 mt-2">Find & Register for Campus Events</p>
-      </div>
-
-      <div className="flex justify-center mt-6 gap-4 flex-wrap">
-        {['All', 'Upcoming', 'Past', ...(user ? ['Registered'] : [])].map(tab => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2 rounded-full ${activeTab === tab ? 'bg-purple-600 text-white' : 'bg-gray-200 text-gray-800'}`}
-          >
-            {tab === 'All' ? 'All Events' : `${tab} Events`}
-          </button>
+      {/* Header */}
+      <div className="relative bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-20 text-center overflow-hidden">
+        {Array.from({ length: 25 }).map((_, index) => (
+          <img
+            key={index}
+            src="/assets/starss.png"
+            alt="Sparkle"
+            className="absolute w-4 h-4 sparkle pointer-events-none"
+            style={{
+              top: `${Math.random() * 100}%`,
+              left: `${Math.random() * 100}%`,
+              animationDelay: `${Math.random() * 5}s`,
+            }}
+          />
         ))}
+        <h1 className="relative z-10 text-4xl font-extrabold mb-2">College Events Hub</h1>
+        <p className="relative z-10 text-lg italic mb-6 text-yellow-400">
+          "Discover, participate, and cherish every campus moment."
+        </p>
+        <div className="relative z-10 flex justify-center gap-4 flex-wrap">
+          <img src="/images/event-left.png" alt="img1" className="h-32 w-48 object-cover rounded-xl shadow-lg" />
+          <img src="/images/event-right.jpg" alt="img2" className="h-32 w-48 object-cover rounded-xl shadow-lg" />
+          <img src="/images/event-mid.jpg" alt="img3" className="h-32 w-48 object-cover rounded-xl shadow-lg" />
+        </div>
       </div>
 
-      <div className="flex justify-center mt-4 mb-6">
-        <select
-          className="border px-3 py-1 rounded"
-          value={filters.sortBy}
-          onChange={e => setFilters({ ...filters, sortBy: e.target.value })}
-        >
-          <option value="">Sort By</option>
-          <option value="Date">Date</option>
-          <option value="Time">Time</option>
-          <option value="Club">Club</option>
-          <option value="Type">Type</option>
-        </select>
+      {/* Upcoming Events */}
+      <div className="text-center my-12">
+        <img src="/assets/calender.png" alt="Calendar Icon" className="w-12 h-12 mx-auto mb-4" />
+        <h2 className="text-4xl font-bold text-purple-700">Upcoming Events</h2>
       </div>
-
-      <div className="px-6">
-        {Object.keys(groupedEvents).length ? (
-          Object.entries(groupedEvents).map(([group, list]) => (
-            <div key={group} className="mb-8">
-              <h2 className="text-xl font-semibold mb-3 text-gray-800">
-                {filters.sortBy ? `🗂 ${filters.sortBy}: ${group}` : group}
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {list.map(renderEventCard)}
-              </div>
-            </div>
-          ))
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+        {upcomingEvents.length > 0 ? (
+          upcomingEvents.map(event => renderEventCard(event, false))
         ) : (
-          <p className="text-center text-gray-500 mt-6">No events found.</p>
+          <p>No upcoming events.</p>
         )}
       </div>
 
-      <footer className="bg-purple-800 text-white py-6 text-center">
-        &copy; {new Date().getFullYear()} Student Events Portal. All rights reserved.
+      {/* Past Events */}
+      <div className="text-center my-12">
+        <img src="/assets/clock.png" alt="Clock Icon" className="w-12 h-12 mx-auto mb-4" />
+        <h2 className="text-4xl font-bold text-purple-700">Past Events</h2>
+      </div>
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {pastEvents.length > 0 ? (
+          pastEvents.map(event => renderEventCard(event, true))
+        ) : (
+          <p>No past events.</p>
+        )}
+      </div>
+
+      {/* Modal */}
+      {selectedEvent && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg max-w-2xl w-full p-6 relative overflow-y-auto max-h-[90vh]">
+            <button
+              className="absolute top-2 right-2 text-gray-500 hover:text-black"
+              onClick={() => setSelectedEvent(null)}
+            >
+              ✕
+            </button>
+            {selectedEvent.poster && (
+              <img
+                src={selectedEvent.poster}
+                alt="Poster"
+                className="rounded mb-4 max-h-60 object-contain mx-auto"
+              />
+            )}
+            <h2 className="text-xl font-bold mb-2">{selectedEvent.title}</h2>
+            <p>
+              📅 {new Date(selectedEvent.date).toLocaleDateString()} | 🕒{' '}
+              {new Date('1970-01-01T' + selectedEvent.time).toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
+            </p>
+            <p>📍 Location: {selectedEvent.location}</p>
+            <p>🎓 Organized By: {selectedEvent.club_name}</p>
+            <div className="mt-3 text-gray-700 whitespace-pre-wrap">
+              {selectedEvent.description}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Footer */}
+      <footer className="bg-purple-800 text-white py-8 mt-6 mb-4">
+        <div className="max-w-6xl mx-auto px-4 text-center">
+          <p>&copy; {new Date().getFullYear()} Campus Events. All rights reserved.</p>
+        </div>
       </footer>
     </div>
   );

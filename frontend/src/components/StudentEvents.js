@@ -39,6 +39,8 @@ const StudentEvents = () => {
         axios.get('/api/events/all'),
         user ? axios.get('/api/events/registered') : Promise.resolve({ data: [] }),
       ]);
+
+      console.log('Fetched events:', eventRes.data); // Debug log
       setEvents(eventRes.data);
       setRegisteredEvents(registeredRes.data.map(ev => ev.id));
     } catch (err) {
@@ -71,9 +73,15 @@ const StudentEvents = () => {
     let result = [...events];
 
     if (activeTab === 'Upcoming') {
-      result = result.filter(e => new Date(e.date) >= today);
+      result = result.filter(e => {
+        const eventDate = new Date(e.date);
+        return !isNaN(eventDate) && eventDate >= today;
+      });
     } else if (activeTab === 'Past') {
-      result = result.filter(e => new Date(e.date) < today);
+      result = result.filter(e => {
+        const eventDate = new Date(e.date);
+        return !isNaN(eventDate) && eventDate < today;
+      });
     } else if (activeTab === 'Registered') {
       result = result.filter(e => registeredEvents.includes(e.id));
     }
@@ -109,6 +117,7 @@ const StudentEvents = () => {
         )}
         <h3 className="text-lg font-bold">{event.title}</h3>
         <p>📅 {new Date(event.date).toLocaleDateString()} | 🕒 {event.time}</p>
+        <p className="text-sm text-red-500">Raw Date: {event.date}</p> {/* Debug line */}
         <p>📍 {event.location}</p>
         <p>🎓 {event.club_name} | 🏷️ {event.event_type}</p>
         <p className="text-gray-700 mt-2 line-clamp-3">{event.description}</p>

@@ -11,18 +11,20 @@ const StudentEvents = () => {
   const [selectedTab, setSelectedTab] = useState('upcoming');
   const [sortOption, setSortOption] = useState('');
   const [selectedEvent, setSelectedEvent] = useState(null);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(null); // null means "checking"
 
   useEffect(() => {
     fetchEvents();
     checkLoginStatus();
+  }, []);
 
+  useEffect(() => {
     const postLoginEventId = sessionStorage.getItem("registerAfterLogin");
-    if (postLoginEventId) {
+    if (isLoggedIn && postLoginEventId) {
       handleRegister(postLoginEventId);
       sessionStorage.removeItem("registerAfterLogin");
     }
-  }, []);
+  }, [isLoggedIn]);
 
   const checkLoginStatus = async () => {
     try {
@@ -30,8 +32,11 @@ const StudentEvents = () => {
       if (res.data && res.data.email) {
         setIsLoggedIn(true);
         fetchRegisteredEvents();
+      } else {
+        setIsLoggedIn(false);
       }
-    } catch {
+    } catch (err) {
+      console.error("Login check failed:", err);
       setIsLoggedIn(false);
     }
   };

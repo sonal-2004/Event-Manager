@@ -12,20 +12,18 @@ const StudentEvents = () => {
   const [activeTab, setActiveTab] = useState('All');
   const [filters, setFilters] = useState({ sortBy: '' });
 
-  // 🧠 Fetch user and events on load
   useEffect(() => {
     fetchUser();
     fetchEvents();
   }, []);
 
-  // 🔄 Handle redirects & registration logic
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const redirectAction = params.get('action');
     const eventId = params.get('eventId');
     const tab = params.get('tab');
 
-    if (user && user.role === 'student') {
+    if (user?.role === 'student') {
       fetchRegisteredEvents().then(() => {
         if (redirectAction === 'register' && eventId) {
           handleRegister(eventId);
@@ -52,18 +50,16 @@ const StudentEvents = () => {
   const fetchEvents = async () => {
     try {
       const res = await axios.get('/api/events/all');
-      setEvents(res.data.events || res.data);
+      setEvents(res.data.events || []);
     } catch (err) {
       console.error('Error fetching events', err);
     }
   };
 
-  // ✅ Deduping logic added here
   const fetchRegisteredEvents = async () => {
     try {
       const res = await axios.get('/api/events/registered');
-      const ids = res.data.events.map(ev => ev.id);
-      const uniqueIds = [...new Set(ids)]; // Dedupe IDs
+      const uniqueIds = [...new Set(res.data.events.map(ev => ev.id))];
       setRegisteredEvents(uniqueIds);
     } catch (err) {
       console.error('Error fetching registered events', err);
@@ -77,9 +73,8 @@ const StudentEvents = () => {
     }
 
     try {
-      const event = events.find(e => e.id === parseInt(eventId));
       const res = await axios.post(`/api/events/register/${eventId}`);
-      alert(`✅ ${res.data.message || `Registered for ${event?.title || 'event'}!`}`);
+      alert(`✅ ${res.data.message || 'Registered successfully!'}`);
       fetchRegisteredEvents();
     } catch (err) {
       alert(err.response?.data?.message || '❌ Registration failed');
@@ -95,10 +90,6 @@ const StudentEvents = () => {
     } else if (activeTab === 'Past') {
       filtered = filtered.filter(e => new Date(e.date) < today);
     } else if (activeTab === 'Registered') {
-      if (!user || user.role !== 'student') {
-        window.location.href = `/login?redirect=/events?tab=registered`;
-        return;
-      }
       filtered = filtered.filter(e => registeredEvents.includes(e.id));
     }
 
@@ -138,32 +129,22 @@ const StudentEvents = () => {
     return (
       <div key={event.id} className="bg-white rounded-lg shadow p-4">
         {event.poster && (
-          <div className="w-full h-48 flex items-center justify-center bg-gray-100 rounded mb-2 overflow-hidden">
-            <img
-              src={event.poster}
-              alt="Poster"
-              className="max-h-full max-w-full object-contain"
-            />
-          </div>
+          <img src={event.poster} alt="Poster" className="w-full h-48 object-contain mb-3 rounded" />
         )}
         <h3 className="text-lg font-bold">{event.title}</h3>
         <p>📅 {new Date(event.date).toLocaleDateString()} | 🕒 {event.time}</p>
         <p>📍 {event.location}</p>
         <p>🎓 {event.club_name} | 🏷️ {event.event_type}</p>
-        <p className="mt-2 text-gray-700 line-clamp-3">{event.description}</p>
+        <p className="text-gray-700 mt-2 line-clamp-3">{event.description}</p>
 
         {isPast ? (
-          <button className="bg-gray-500 text-white py-1 px-4 rounded mt-4 cursor-not-allowed" disabled>
-            Deadline Gone
-          </button>
+          <button className="bg-gray-400 text-white px-4 py-1 rounded mt-3" disabled>Deadline Gone</button>
         ) : isRegistered ? (
-          <button className="bg-green-500 text-white py-1 px-4 rounded mt-4" disabled>
-            Registered
-          </button>
+          <button className="bg-green-500 text-white px-4 py-1 rounded mt-3" disabled>Registered</button>
         ) : (
           <button
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1 rounded mt-3"
             onClick={() => handleRegister(event.id)}
-            className="bg-blue-600 hover:bg-blue-700 text-white py-1 px-4 rounded mt-4"
           >
             Register
           </button>
@@ -172,7 +153,7 @@ const StudentEvents = () => {
     );
   };
 
-  const tabTitles = {
+  const tabHeaders = {
     All: '🎉 All Events',
     Upcoming: '📅 Upcoming Events',
     Past: '⏳ Past Events',
@@ -183,21 +164,17 @@ const StudentEvents = () => {
     <div>
       <Navbar />
 
-      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 py-16 text-white text-center relative">
-        <h1 className="text-4xl font-bold z-10 relative">{tabTitles[activeTab]}</h1>
-        <p className="italic text-yellow-300 mt-2 z-10 relative">
-          Find & Register for Campus Events
-        </p>
+      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 py-16 text-white text-center">
+        <h1 className="text-4xl font-bold">{tabHeaders[activeTab]}</h1>
+        <p className="italic text-yellow-300 mt-2">Find & Register for Campus Events</p>
       </div>
 
-      <div className="flex justify-center mt-6 flex-wrap gap-4">
+      <div className="flex justify-center mt-6 gap-4 flex-wrap">
         {['All', 'Upcoming', 'Past', ...(user ? ['Registered'] : [])].map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2 rounded-full ${
-              activeTab === tab ? 'bg-purple-600 text-white' : 'bg-gray-200 text-gray-700'
-            }`}
+            className={`px-4 py-2 rounded-full ${activeTab === tab ? 'bg-purple-600 text-white' : 'bg-gray-200 text-gray-800'}`}
           >
             {tab === 'All' ? 'All Events' : `${tab} Events`}
           </button>
@@ -207,6 +184,7 @@ const StudentEvents = () => {
       <div className="flex justify-center mt-4 mb-6">
         <select
           className="border px-3 py-1 rounded"
+          value={filters.sortBy}
           onChange={e => setFilters({ ...filters, sortBy: e.target.value })}
         >
           <option value="">Sort By</option>
@@ -220,7 +198,7 @@ const StudentEvents = () => {
       <div className="px-6">
         {Object.keys(groupedEvents).length ? (
           Object.entries(groupedEvents).map(([group, list]) => (
-            <div key={group} className="mb-10">
+            <div key={group} className="mb-8">
               <h2 className="text-xl font-semibold mb-3 text-gray-800">
                 {filters.sortBy ? `🗂 ${filters.sortBy}: ${group}` : group}
               </h2>
@@ -230,7 +208,7 @@ const StudentEvents = () => {
             </div>
           ))
         ) : (
-          <p className="text-center text-gray-500">No events found.</p>
+          <p className="text-center text-gray-500 mt-6">No events found.</p>
         )}
       </div>
 

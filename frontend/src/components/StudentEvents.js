@@ -11,10 +11,11 @@ const StudentEvents = () => {
   const [selectedTab, setSelectedTab] = useState('upcoming');
   const [sortOption, setSortOption] = useState('');
   const [selectedEvent, setSelectedEvent] = useState(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
     fetchEvents();
-    fetchRegisteredEvents();
+    checkLoginStatus();
 
     const postLoginEventId = sessionStorage.getItem("registerAfterLogin");
     if (postLoginEventId) {
@@ -22,6 +23,18 @@ const StudentEvents = () => {
       sessionStorage.removeItem("registerAfterLogin");
     }
   }, []);
+
+  const checkLoginStatus = async () => {
+    try {
+      const res = await axios.get('/api/student/profile');
+      if (res.data && res.data.email) {
+        setIsLoggedIn(true);
+        fetchRegisteredEvents();
+      }
+    } catch {
+      setIsLoggedIn(false);
+    }
+  };
 
   const fetchEvents = async () => {
     try {
@@ -37,20 +50,23 @@ const StudentEvents = () => {
       const res = await axios.get('/api/student/registered');
       setRegisteredEvents(res.data.map(e => e.id));
     } catch (error) {
-      // Do nothing; user might not be logged in
+      console.error('Could not fetch registered events');
     }
   };
 
   const handleRegister = async (eventId) => {
+    if (!isLoggedIn) {
+      sessionStorage.setItem("registerAfterLogin", eventId);
+      window.location.href = "/login";
+      return;
+    }
+
     try {
       await axios.post(`/api/student/register/${eventId}`);
       alert("✅ Registration successful!");
       fetchRegisteredEvents();
     } catch (error) {
-      if (error.response?.status === 401 || error.response?.status === 403) {
-        sessionStorage.setItem("registerAfterLogin", eventId);
-        window.location.href = "/login";
-      } else if (error.response?.status === 400) {
+      if (error.response?.status === 400) {
         alert("ℹ️ You are already registered for this event.");
       } else {
         alert("❌ Registration failed.");
@@ -59,33 +75,27 @@ const StudentEvents = () => {
   };
 
   const today = new Date();
-
   const isPast = (date) => new Date(date) < today;
 
-  // Sort logic
   const sortEvents = (eventsList) => {
     return [...eventsList].sort((a, b) => {
       switch (sortOption) {
-        case 'date':
-          return new Date(a.date) - new Date(b.date);
-        case 'time':
-          return a.time.localeCompare(b.time);
-        case 'type':
-          return a.eventType?.localeCompare(b.eventType || '');
-        case 'club':
-          return a.club_name?.localeCompare(b.club_name || '');
-        default:
-          return 0;
+        case 'date': return new Date(a.date) - new Date(b.date);
+        case 'time': return a.time.localeCompare(b.time);
+        case 'type': return a.eventType?.localeCompare(b.eventType || '');
+        case 'club': return a.club_name?.localeCompare(b.club_name || '');
+        default: return 0;
       }
     });
   };
 
-  // Filtered & sorted events
   const filteredEvents = {
     all: sortEvents(events),
     upcoming: sortEvents(events.filter(e => !isPast(e.date))),
     past: sortEvents(events.filter(e => isPast(e.date))),
-    registered: sortEvents(events.filter(e => registeredEvents.includes(e.id))),
+    registered: isLoggedIn
+      ? sortEvents(events.filter(e => registeredEvents.includes(e.id)))
+      : [],
   };
 
   const getSectionTitle = () => {
@@ -93,9 +103,17 @@ const StudentEvents = () => {
       case 'upcoming': return 'Upcoming Events';
       case 'past': return 'Past Events';
       case 'registered': return 'Your Registered Events';
-      case 'all':
       default: return 'All Events';
     }
+  };
+
+  const handleTabChange = (tab) => {
+    if (tab === 'registered' && !isLoggedIn) {
+      alert("⚠️ Please log in to view your registered events.");
+      window.location.href = "/login";
+      return;
+    }
+    setSelectedTab(tab);
   };
 
   const renderEventCard = (event) => {
@@ -150,7 +168,7 @@ const StudentEvents = () => {
         {['all', 'upcoming', 'past', 'registered'].map(tab => (
           <button
             key={tab}
-            onClick={() => setSelectedTab(tab)}
+            onClick={() => handleTabChange(tab)}
             className={`px-4 py-2 rounded-full border ${selectedTab === tab ? 'bg-purple-600 text-white' : 'bg-gray-100'}`}
           >
             {tab.charAt(0).toUpperCase() + tab.slice(1)} Events

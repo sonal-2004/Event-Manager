@@ -91,48 +91,48 @@ const StudentEvents = () => {
     setFilteredEvents(result);
   };
 
-  const renderEventCard = (event) => {
-    const isRegistered = registeredEvents.includes(event.id);
-    const isPast = new Date(event.date) < new Date();
+ const renderEventCard = (event) => {
+  const isRegistered = registeredEvents.includes(event.id);
+  const isPast = new Date(event.date) < new Date();
 
-    return (
-      <div
-        key={event.id}
-        className="bg-white rounded-lg shadow-lg shadow-purple-300 p-4 max-w-sm mx-auto flex flex-col hover:shadow-xl transition"
-      >
-        {event.poster && (
-          <img
-            src={event.poster}
-            alt="Poster"
-            className="rounded max-h-60 w-full object-cover mb-3"
-          />
-        )}
-        <h3 className="text-lg font-bold">{event.title}</h3>
-        <p>📅 {new Date(event.date).toLocaleDateString()} | 🕒 {event.time}</p>
-        <p>📍 {event.location}</p>
-        <p>🎓 {event.club_name} | 🏷️ {event.event_type}</p>
-        <p className="text-gray-700 mt-2 line-clamp-3">{event.description}</p>
-        {isPast ? (
-          <button
-            disabled
-            className="mt-4 px-4 py-2 rounded bg-gray-400 text-white cursor-not-allowed"
-          >
-            Deadline Gone
-          </button>
-        ) : (
-          <button
-            disabled={isRegistered}
-            onClick={() => handleRegister(event.id)}
-            className={`mt-4 px-4 py-2 rounded ${
-              isRegistered ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
-            } text-white`}
-          >
-            {isRegistered ? 'Registered' : 'Register'}
-          </button>
-        )}
-      </div>
-    );
-  };
+  return (
+    <div
+      key={event.id}
+      className="bg-white rounded-lg shadow-lg shadow-purple-300 p-4 max-w-sm mx-auto flex flex-col hover:shadow-xl transition"
+    >
+      {event.poster && (
+        <img
+          src={event.poster}
+          alt="Poster"
+          className="rounded max-h-60 w-full object-cover mb-3"
+        />
+      )}
+      <h3 className="text-lg font-bold">{event.title}</h3>
+      <p>📅 {new Date(event.date).toLocaleDateString()} | 🕒 {event.time}</p>
+      <p>📍 {event.location}</p>
+      <p>🎓 {event.club_name} | 🏷️ {event.event_type}</p>
+      <p className="text-gray-700 mt-2 line-clamp-3">{event.description}</p>
+      {isPast ? (
+        <button
+          disabled
+          className="mt-4 px-4 py-2 rounded bg-gray-400 text-white cursor-not-allowed"
+        >
+          Deadline Gone
+        </button>
+      ) : (
+        <button
+          disabled={isRegistered}
+          onClick={() => handleRegister(event.id)}
+          className={`mt-4 px-4 py-2 rounded ${
+            isRegistered ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
+          } text-white`}
+        >
+          {isRegistered ? 'Registered' : 'Register'}
+        </button>
+      )}
+    </div>
+  );
+};
 
   const tabHeaderText = {
     All: 'All Events',

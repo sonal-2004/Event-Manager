@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 
-// ✅ Middleware: Check if student is logged in
+// ✅ Middleware: Only allow logged-in students
 const isStudent = (req, res, next) => {
   if (!req.session.user || req.session.user.role !== 'student') {
     return res.status(401).json({ message: 'You must log in as a student' });
@@ -10,7 +10,7 @@ const isStudent = (req, res, next) => {
   next();
 };
 
-// ✅ Route: Register for an event
+// ✅ Register for event
 router.post('/register/:eventId', isStudent, async (req, res) => {
   const studentId = req.session.user.id;
   const eventId = req.params.eventId;
@@ -30,41 +30,43 @@ router.post('/register/:eventId', isStudent, async (req, res) => {
       [studentId, eventId]
     );
 
-    res.status(200).json({ message: 'Registered successfully' });
+    // Get event title for confirmation
+    const [[event]] = await db.query('SELECT title FROM events WHERE id = ?', [eventId]);
+
+    res.status(200).json({ message: `Registered successfully for ${event.title}` });
   } catch (err) {
-    console.error('❌ Error in register route:', err);
+    console.error('❌ Error registering:', err);
     res.status(500).json({ message: 'Internal server error' });
   }
 });
 
-// ✅ Route: Get all events
+// ✅ Get all events
 router.get('/all', isStudent, async (req, res) => {
   try {
     const [events] = await db.query('SELECT * FROM events ORDER BY date ASC');
-    res.json({ events }); // ✅ wrap in object
+    res.json(events);
   } catch (err) {
-    console.error('❌ Error fetching all events:', err.message);
+    console.error('❌ Error fetching events:', err.message);
     res.status(500).json({ message: 'Failed to retrieve events' });
   }
 });
 
-// ✅ Route: Get full details of registered events
+// ✅ Get registered events for logged-in student
 router.get('/registered', isStudent, async (req, res) => {
   try {
     const studentId = req.session.user.id;
 
     const [rows] = await db.query(
-      `SELECT e.*
-       FROM student_registrations sr
+      `SELECT e.* FROM student_registrations sr
        JOIN events e ON sr.event_id = e.id
        WHERE sr.student_id = ?
        ORDER BY e.date ASC`,
       [studentId]
     );
 
-    res.json({ events: rows }); // ✅ wrap in object
+    res.json(rows);
   } catch (err) {
-    console.error('❌ Error in /registered route:', err);
+    console.error('❌ Error fetching registered events:', err);
     res.status(500).json({ message: 'Internal server error' });
   }
 });

@@ -17,7 +17,13 @@ const StudentEvents = () => {
   }, []);
 
   useEffect(() => {
-    if (user !== null) fetchAllData();
+    if (user !== null) {
+      if (!user || user.role !== 'student') {
+        window.location.href = `/login?redirect=/events`;
+        return;
+      }
+      fetchAllData();
+    }
   }, [user]);
 
   useEffect(() => {
@@ -104,7 +110,7 @@ const StudentEvents = () => {
 
   const renderEventCard = (event) => {
     const isRegistered = registeredEvents.includes(event.id);
-    const isPast = new Date(event.date) < new Date();
+    const isPastDeadline = new Date(event.date) < new Date();
 
     return (
       <div
@@ -124,22 +130,26 @@ const StudentEvents = () => {
         <p>🎓 {event.club_name} | 🏷️ {event.event_type}</p>
         <p className="text-gray-700 mt-2 line-clamp-3">{event.description}</p>
 
-        {isPast ? (
+        {isPastDeadline ? (
           <button
+            className="bg-gray-500 cursor-not-allowed text-white py-1 px-4 rounded mt-4"
             disabled
-            className="mt-4 px-4 py-2 rounded bg-gray-400 text-white cursor-not-allowed"
           >
             Deadline Gone
           </button>
+        ) : isRegistered ? (
+          <button
+            className="bg-green-500 text-white py-1 px-4 rounded mt-4"
+            disabled
+          >
+            Registered
+          </button>
         ) : (
           <button
-            disabled={isRegistered}
+            className="bg-blue-500 hover:bg-blue-600 text-white py-1 px-4 rounded mt-4"
             onClick={() => handleRegister(event.id)}
-            className={`mt-4 px-4 py-2 rounded ${
-              isRegistered ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
-            } text-white`}
           >
-            {isRegistered ? 'Registered' : 'Register'}
+            Register
           </button>
         )}
       </div>
@@ -165,7 +175,12 @@ const StudentEvents = () => {
             }}
           />
         ))}
-        <h1 className="relative z-10 text-4xl font-bold">🎉 Student Events Dashboard</h1>
+        <h1 className="relative z-10 text-4xl font-bold">
+          {activeTab === 'All' && '🎉 All Events'}
+          {activeTab === 'Upcoming' && '📅 Upcoming Events'}
+          {activeTab === 'Past' && '⏳ Past Events'}
+          {activeTab === 'Registered' && '✅ Your Registered Events'}
+        </h1>
         <p className="mt-2 text-yellow-300 italic z-10 relative">Find & Register for Campus Events</p>
       </div>
 

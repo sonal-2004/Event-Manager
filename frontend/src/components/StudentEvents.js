@@ -67,19 +67,20 @@ const StudentEvents = () => {
   };
 
   const handleRegister = async (eventId) => {
-    if (!user || user.role !== 'student') {
-      window.location.href = `/login?redirect=/events?action=register&eventId=${eventId}`;
-      return;
-    }
+  if (!user || user.role !== 'student') {
+    window.location.href = `/login?redirect=/events?action=register&eventId=${eventId}`;
+    return;
+  }
 
-    try {
-      const res = await axios.post(`/api/events/register/${eventId}`);
-      alert(`✅ ${res.data.message || 'Registered successfully!'}`);
-      fetchRegisteredEvents();
-    } catch (err) {
-      alert(err.response?.data?.message || '❌ Registration failed');
-    }
-  };
+  try {
+    const res = await axios.post(`/api/events/register/${eventId}`);
+    alert(`✅ ${res.data.message || 'Registered successfully!'}`);
+    fetchRegisteredEvents();
+  } catch (err) {
+    alert(err.response?.data?.message || '❌ Registration failed');
+  }
+};
+
 
   const filterAndGroupEvents = () => {
     const today = new Date();

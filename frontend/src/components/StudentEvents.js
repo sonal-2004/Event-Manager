@@ -30,7 +30,6 @@ const StudentEvents = () => {
       setUser(res.data);
     } catch (err) {
       setUser(null);
-      fetchAllData(); // allow guests to view events
     }
   };
 
@@ -51,16 +50,16 @@ const StudentEvents = () => {
     try {
       const authCheck = await axios.get('/api/auth/user');
       if (!authCheck.data || authCheck.data.role !== 'student') {
-        alert('Please log in as a student to register for events.');
-        window.location.href = '/login';
+        window.location.href = `/login?redirect=/student/events`;
         return;
       }
+
       await axios.post(`/api/events/register/${eventId}`);
       await fetchAllData();
       alert('Successfully registered!');
     } catch (err) {
       if (err.response?.status === 401) {
-        window.location.href = '/login';
+        window.location.href = `/login?redirect=/student/events`;
       } else {
         alert(err.response?.data?.message || 'Registration failed');
       }

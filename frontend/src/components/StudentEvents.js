@@ -11,10 +11,6 @@ const StudentEvents = () => {
   const [filteredEvents, setFilteredEvents] = useState([]);
   const [activeTab, setActiveTab] = useState('All');
   const [filters, setFilters] = useState({
-    date: '',
-    time: '',
-    club_name: '',
-    event_type: '',
     sortBy: '',
   });
 
@@ -23,7 +19,7 @@ const StudentEvents = () => {
   }, []);
 
   useEffect(() => {
-    if (user) fetchAllData();
+    if (user !== null) fetchAllData();
   }, [user]);
 
   useEffect(() => {
@@ -36,6 +32,7 @@ const StudentEvents = () => {
       setUser(res.data);
     } catch (err) {
       setUser(null);
+      fetchAllData(); // allow guests to view events
     }
   };
 
@@ -43,7 +40,7 @@ const StudentEvents = () => {
     try {
       const [eventRes, registeredRes] = await Promise.all([
         axios.get('/api/events/all'),
-        axios.get('/api/events/registered'),
+        user ? axios.get('/api/events/registered') : Promise.resolve({ data: [] }),
       ]);
       setEvents(eventRes.data);
       setRegisteredEvents(registeredRes.data.map(ev => ev.id));
@@ -55,9 +52,9 @@ const StudentEvents = () => {
   const handleRegister = async (eventId) => {
     if (!user || user.role !== 'student') {
       alert('Please log in as a student to register for events.');
+      window.location.href = '/login';
       return;
     }
-
     try {
       await axios.post(`/api/events/register/${eventId}`);
       fetchAllData();
@@ -79,22 +76,18 @@ const StudentEvents = () => {
       result = result.filter(e => registeredEvents.includes(e.id));
     }
 
-    if (filters.date) result = result.filter(e => e.date === filters.date);
-    if (filters.time) result = result.filter(e => e.time === filters.time);
-    if (filters.club_name) result = result.filter(e => e.club_name === filters.club_name);
-    if (filters.event_type) result = result.filter(e => e.event_type === filters.event_type);
-
-    // Sort by date or time if selected
-    if (filters.sortBy === 'date') {
+    if (filters.sortBy === 'Date') {
       result.sort((a, b) => new Date(a.date) - new Date(b.date));
-    } else if (filters.sortBy === 'time') {
+    } else if (filters.sortBy === 'Time') {
       result.sort((a, b) => a.time.localeCompare(b.time));
+    } else if (filters.sortBy === 'Club') {
+      result.sort((a, b) => a.club_name.localeCompare(b.club_name));
+    } else if (filters.sortBy === 'Type') {
+      result.sort((a, b) => a.event_type.localeCompare(b.event_type));
     }
 
     setFilteredEvents(result);
   };
-
-  const uniqueValues = (key) => [...new Set(events.map(e => e[key]).filter(Boolean))];
 
   const renderEventCard = (event) => {
     const isRegistered = registeredEvents.includes(event.id);
@@ -170,36 +163,16 @@ const StudentEvents = () => {
         ))}
       </div>
 
-      {/* Filters and Sorting */}
-      <div className="flex flex-wrap justify-center gap-4 px-4 mb-6">
-        <select className="border px-3 py-1 rounded" onChange={(e) => setFilters({ ...filters, date: e.target.value })}>
-          <option value="">Date</option>
-          {uniqueValues('date').map((d, i) => (
-            <option key={i} value={d}>{d}</option>
-          ))}
-        </select>
-        <select className="border px-3 py-1 rounded" onChange={(e) => setFilters({ ...filters, time: e.target.value })}>
-          <option value="">Time</option>
-          {uniqueValues('time').map((t, i) => (
-            <option key={i} value={t}>{t}</option>
-          ))}
-        </select>
-        <select className="border px-3 py-1 rounded" onChange={(e) => setFilters({ ...filters, club_name: e.target.value })}>
-          <option value="">Club</option>
-          {uniqueValues('club_name').map((c, i) => (
-            <option key={i} value={c}>{c}</option>
-          ))}
-        </select>
-        <select className="border px-3 py-1 rounded" onChange={(e) => setFilters({ ...filters, event_type: e.target.value })}>
-          <option value="">Type</option>
-          {uniqueValues('event_type').map((type, i) => (
-            <option key={i} value={type}>{type}</option>
-          ))}
-        </select>
-        <select className="border px-3 py-1 rounded" onChange={(e) => setFilters({ ...filters, sortBy: e.target.value })}>
+      <div className="flex justify-center gap-4 px-4 mb-6">
+        <select
+          className="border px-3 py-1 rounded"
+          onChange={(e) => setFilters({ ...filters, sortBy: e.target.value })}
+        >
           <option value="">Sort By</option>
-          <option value="date">Date</option>
-          <option value="time">Time</option>
+          <option value="Date">Date</option>
+          <option value="Time">Time</option>
+          <option value="Club">Club</option>
+          <option value="Type">Type</option>
         </select>
       </div>
 

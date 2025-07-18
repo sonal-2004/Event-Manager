@@ -1,4 +1,3 @@
-// same import and initial hooks...
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import Navbar from '../components/navbar';
@@ -15,15 +14,12 @@ const StudentEvents = () => {
 
   useEffect(() => {
     fetchUser();
+    fetchEvents();
   }, []);
 
   useEffect(() => {
-    if (user !== null) {
-      if (!user || user.role !== 'student') {
-        window.location.href = `/login?redirect=/events`;
-        return;
-      }
-      fetchAllData();
+    if (user && user.role === 'student') {
+      fetchRegisteredEvents();
     }
   }, [user]);
 
@@ -40,16 +36,21 @@ const StudentEvents = () => {
     }
   };
 
-  const fetchAllData = async () => {
+  const fetchEvents = async () => {
     try {
-      const [eventRes, registeredRes] = await Promise.all([
-        axios.get('/api/events/all'),
-        axios.get('/api/events/registered'),
-      ]);
-      setEvents(eventRes.data);
-      setRegisteredEvents(registeredRes.data.map(ev => ev.id));
+      const res = await axios.get('/api/events/all');
+      setEvents(res.data);
     } catch (err) {
-      console.error(err);
+      console.error('Error fetching events', err);
+    }
+  };
+
+  const fetchRegisteredEvents = async () => {
+    try {
+      const res = await axios.get('/api/events/registered');
+      setRegisteredEvents(res.data.map(ev => ev.id));
+    } catch (err) {
+      console.error('Error fetching registered events', err);
     }
   };
 
@@ -60,10 +61,10 @@ const StudentEvents = () => {
     }
     try {
       await axios.post(`/api/events/register/${eventId}`);
-      alert('Successfully registered!');
-      fetchAllData();
+      alert('✅ Successfully registered! Check your email for confirmation.');
+      fetchRegisteredEvents();
     } catch (err) {
-      alert(err.response?.data?.message || 'Registration failed');
+      alert(err.response?.data?.message || '❌ Registration failed');
     }
   };
 
@@ -76,6 +77,10 @@ const StudentEvents = () => {
     } else if (activeTab === 'Past') {
       filtered = filtered.filter(e => new Date(e.date) < today);
     } else if (activeTab === 'Registered') {
+      if (!user || user.role !== 'student') {
+        window.location.href = `/login?redirect=/events`;
+        return;
+      }
       filtered = filtered.filter(e => registeredEvents.includes(e.id));
     }
 

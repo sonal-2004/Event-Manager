@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import Navbar from '../components/navbar';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 axios.defaults.withCredentials = true;
 
@@ -12,13 +14,11 @@ const StudentEvents = () => {
   const [activeTab, setActiveTab] = useState('All');
   const [filters, setFilters] = useState({ sortBy: '' });
 
-  // 🧠 Fetch user and events on load
   useEffect(() => {
     fetchUser();
     fetchEvents();
   }, []);
 
-  // 🔄 Handle redirects & registration logic
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const redirectAction = params.get('action');
@@ -58,12 +58,11 @@ const StudentEvents = () => {
     }
   };
 
-  // ✅ Deduping logic added here
   const fetchRegisteredEvents = async () => {
     try {
       const res = await axios.get('/api/events/registered');
-      const ids = res.data.events.map(ev => ev.id);
-      const uniqueIds = [...new Set(ids)]; // Dedupe IDs
+      const ids = res.data.events.map(ev => parseInt(ev.id));
+      const uniqueIds = [...new Set(ids)];
       setRegisteredEvents(uniqueIds);
     } catch (err) {
       console.error('Error fetching registered events', err);
@@ -79,10 +78,10 @@ const StudentEvents = () => {
     try {
       const event = events.find(e => e.id === parseInt(eventId));
       const res = await axios.post(`/api/events/register/${eventId}`);
-      alert(`✅ ${res.data.message || `Registered for ${event?.title || 'event'}!`}`);
+      toast.success(`🎉 ${res.data.message || `Registered for ${event?.title || 'event'}!`}`);
       fetchRegisteredEvents();
     } catch (err) {
-      alert(err.response?.data?.message || '❌ Registration failed');
+      toast.error(err.response?.data?.message || '❌ Registration failed');
     }
   };
 
@@ -160,6 +159,13 @@ const StudentEvents = () => {
           <button className="bg-green-500 text-white py-1 px-4 rounded mt-4" disabled>
             Registered
           </button>
+        ) : !user ? (
+          <button
+            onClick={() => window.location.href = `/login?redirect=/events?action=register&eventId=${event.id}`}
+            className="bg-blue-500 text-white py-1 px-4 rounded mt-4"
+          >
+            Login to Register
+          </button>
         ) : (
           <button
             onClick={() => handleRegister(event.id)}
@@ -182,6 +188,7 @@ const StudentEvents = () => {
   return (
     <div>
       <Navbar />
+      <ToastContainer />
 
       <div className="bg-gradient-to-r from-indigo-600 to-purple-600 py-16 text-white text-center relative">
         <h1 className="text-4xl font-bold z-10 relative">{tabTitles[activeTab]}</h1>

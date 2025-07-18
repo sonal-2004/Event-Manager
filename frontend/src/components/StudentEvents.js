@@ -9,35 +9,30 @@ const StudentEvents = () => {
   const [events, setEvents] = useState([]);
   const [registeredEvents, setRegisteredEvents] = useState([]);
   const [selectedTab, setSelectedTab] = useState('all');
-  const [sortOption, setSortOption] = useState('');
   const [selectedEvent, setSelectedEvent] = useState(null);
+  const [sortOption, setSortOption] = useState('');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchEvents();
-    checkLoginStatus();
-  }, []);
-
-  useEffect(() => {
+    checkLoginAndFetchRegistered();
+    
     const postLoginEventId = sessionStorage.getItem("registerAfterLogin");
-    if (isLoggedIn && postLoginEventId) {
+    if (postLoginEventId) {
       handleRegister(postLoginEventId);
       sessionStorage.removeItem("registerAfterLogin");
     }
-  }, [isLoggedIn]);
+  }, []);
 
-  const checkLoginStatus = async () => {
+  const checkLoginAndFetchRegistered = async () => {
     try {
       const res = await axios.get('/api/student/profile');
-      if (res.data && res.data.email) {
+      if (res.data?.email) {
         setIsLoggedIn(true);
         fetchRegisteredEvents();
       }
-    } catch {
+    } catch (err) {
       setIsLoggedIn(false);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -46,7 +41,7 @@ const StudentEvents = () => {
       const res = await axios.get('/api/events/all');
       setEvents(res.data);
     } catch (error) {
-      console.error('❌ Failed to fetch events:', error);
+      console.error('Failed to fetch events:', error);
     }
   };
 
@@ -55,27 +50,23 @@ const StudentEvents = () => {
       const res = await axios.get('/api/student/registered');
       setRegisteredEvents(res.data.map(e => e.id));
     } catch (error) {
-      console.error('⚠️ Could not fetch registered events');
+      console.error('Failed to fetch registered events:', error);
     }
   };
 
   const handleRegister = async (eventId) => {
-    if (!isLoggedIn) {
-      sessionStorage.setItem("registerAfterLogin", eventId);
-      window.location.href = "/login";
-      return;
-    }
-
     try {
       await axios.post(`/api/student/register/${eventId}`);
       alert("✅ Registration successful!");
       fetchRegisteredEvents();
     } catch (error) {
-      console.error('❌ Registration error:', error);
-      if (error.response?.status === 400) {
-        alert("ℹ️ You're already registered for this event.");
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        sessionStorage.setItem("registerAfterLogin", eventId);
+        window.location.href = "/login";
+      } else if (error.response?.status === 400) {
+        alert("ℹ You are already registered for this event.");
       } else {
-        alert("❌ Registration failed. Please try again.");
+        alert("❌ Registration failed.");
       }
     }
   };
@@ -83,45 +74,32 @@ const StudentEvents = () => {
   const today = new Date();
   const isPast = (date) => new Date(date) < today;
 
-  const sortEvents = (list) => {
-    return [...list].sort((a, b) => {
+  const sortEvents = (eventsList) => {
+    return [...eventsList].sort((a, b) => {
       switch (sortOption) {
         case 'date': return new Date(a.date) - new Date(b.date);
         case 'time': return a.time.localeCompare(b.time);
-        case 'eventType': return (a.eventType || '').localeCompare(b.eventType || '');
-        case 'club_name': return (a.club_name || '').localeCompare(b.club_name || '');
+        case 'type': return a.eventType?.localeCompare(b.eventType || '');
+        case 'club': return a.club_name?.localeCompare(b.club_name || '');
         default: return 0;
       }
     });
   };
 
-  const getFilteredEvents = () => {
-    let base = events;
-
-    if (selectedTab === 'upcoming') {
-      base = base.filter(e => !isPast(e.date));
-    } else if (selectedTab === 'past') {
-      base = base.filter(e => isPast(e.date));
-    } else if (selectedTab === 'registered') {
-      base = base.filter(e => registeredEvents.includes(e.id));
-    }
-
-    return sortEvents(base);
+  const filteredEvents = {
+    all: sortEvents(events),
+    upcoming: sortEvents(events.filter(e => !isPast(e.date))),
+    past: sortEvents(events.filter(e => isPast(e.date))),
+    registered: isLoggedIn ? sortEvents(events.filter(e => registeredEvents.includes(e.id))) : [],
   };
 
-  const groupedEvents = () => {
-    const list = getFilteredEvents();
-
-    if (!sortOption) return { '': list };
-
-    return list.reduce((groups, event) => {
-      const key = sortOption === 'date'
-        ? new Date(event.date).toLocaleDateString()
-        : event[sortOption] || 'Unknown';
-      if (!groups[key]) groups[key] = [];
-      groups[key].push(event);
-      return groups;
-    }, {});
+  const getSectionTitle = () => {
+    switch (selectedTab) {
+      case 'upcoming': return 'Upcoming Events';
+      case 'past': return 'Past Events';
+      case 'registered': return 'Your Registered Events';
+      default: return 'All Events';
+    }
   };
 
   const renderEventCard = (event) => {
@@ -131,7 +109,7 @@ const StudentEvents = () => {
     return (
       <div
         key={event.id}
-        className="bg-white border rounded-lg shadow-md p-4 hover:shadow-lg transition cursor-pointer"
+        className="bg-white border rounded-lg shadow-md p-4 max-w-sm mx-auto hover:shadow-xl transition cursor-pointer"
         onClick={() => setSelectedEvent(event)}
       >
         {event.poster && (
@@ -145,51 +123,45 @@ const StudentEvents = () => {
         <p>🎓 {event.club_name}</p>
         <p className="mt-2 text-gray-700 line-clamp-3">{event.description}</p>
 
-        {selectedTab !== 'registered' && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              if (!isPastEvent && !isRegistered) handleRegister(event.id);
-            }}
-            disabled={isPastEvent || isRegistered}
-            className={`mt-4 w-full py-2 rounded text-white ${isPastEvent || isRegistered ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'}`}
-          >
-            {isPastEvent ? 'Registration Closed' : isRegistered ? 'Registered' : 'Register'}
-          </button>
-        )}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            if (!isPastEvent && !isRegistered) handleRegister(event.id);
+          }}
+          disabled={isPastEvent || isRegistered}
+          className={`mt-4 w-full py-2 rounded text-white ${isPastEvent || isRegistered ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
+        >
+          {isPastEvent ? 'Registration Closed' : isRegistered ? 'Registered' : 'Register'}
+        </button>
       </div>
     );
   };
-
-  const renderTabs = () => {
-    const tabs = ['all', ...(isLoggedIn ? ['upcoming', 'past', 'registered'] : [])];
-    return tabs.map(tab => (
-      <button
-        key={tab}
-        onClick={() => setSelectedTab(tab)}
-        className={`px-4 py-2 rounded-full border ${selectedTab === tab ? 'bg-purple-600 text-white' : 'bg-gray-100'}`}
-      >
-        {tab.charAt(0).toUpperCase() + tab.slice(1)} Events
-      </button>
-    ));
-  };
-
-  if (loading) return <p className="text-center py-10 text-lg text-gray-600">Loading...</p>;
 
   return (
     <div>
       <Navbar />
 
+      {/* Header */}
       <div className="relative bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-20 text-center">
-        <h1 className="text-4xl font-bold mb-2">Student Events</h1>
+        <h1 className="text-4xl font-bold mb-2">{getSectionTitle()}</h1>
         <p className="italic text-yellow-300">Find & Register for Campus Events</p>
       </div>
 
       {/* Tabs */}
-      <div className="flex justify-center my-6 gap-2 flex-wrap">{renderTabs()}</div>
+      <div className="flex justify-center my-6 gap-2 flex-wrap">
+        {['all', 'upcoming', 'past', ...(isLoggedIn ? ['registered'] : [])].map(tab => (
+          <button
+            key={tab}
+            onClick={() => setSelectedTab(tab)}
+            className={`px-4 py-2 rounded-full border ${selectedTab === tab ? 'bg-purple-600 text-white' : 'bg-gray-100'}`}
+          >
+            {tab.charAt(0).toUpperCase() + tab.slice(1)} Events
+          </button>
+        ))}
+      </div>
 
-      {/* Filter Box */}
-      <div className="flex justify-end items-center px-4 mb-6">
+      {/* Sort Dropdown */}
+      <div className="flex justify-end px-4 mb-4 items-center">
         <label className="mr-2 font-medium">Sort by:</label>
         <select
           value={sortOption}
@@ -199,23 +171,17 @@ const StudentEvents = () => {
           <option value="">None</option>
           <option value="date">Date</option>
           <option value="time">Time</option>
-          <option value="eventType">Event Type</option>
-          <option value="club_name">Club</option>
+          <option value="type">Event Type</option>
+          <option value="club">Club Name</option>
         </select>
       </div>
 
-      {/* Grouped Events */}
-      <div className="px-4 mb-16 space-y-6">
-        {Object.entries(groupedEvents()).map(([group, list]) => (
-          <div key={group}>
-            {sortOption && <h2 className="text-xl font-semibold mb-3">{group}</h2>}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {list.map(event => renderEventCard(event))}
-            </div>
-          </div>
-        ))}
-        {!Object.values(groupedEvents()).flat().length && (
-          <p className="text-center text-gray-500">No events to display.</p>
+      {/* Events Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 px-4 mb-16">
+        {filteredEvents[selectedTab]?.length > 0 ? (
+          filteredEvents[selectedTab].map(event => renderEventCard(event))
+        ) : (
+          <p className="text-center col-span-full">No events to display.</p>
         )}
       </div>
 

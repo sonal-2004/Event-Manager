@@ -146,7 +146,7 @@ const StudentEvents = () => {
         {filteredEvents[selectedTab].length > 0 ? (
           filteredEvents[selectedTab].map(event => renderEventCard(event))
         ) : (
-          <p className="text-center col-span-full">Please Login to See Events.</p>
+          <p className="text-center col-span-full">Please Login to See .</p>
         )}
       </div>
 

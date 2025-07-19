@@ -67,6 +67,14 @@ router.get('/whoami', (req, res) => {
     res.status(401).json({ message: 'Not logged in' });
   }
 });
+// routes/auth.js
+router.get('/check', (req, res) => {
+  if (req.session.user) {
+    res.json({ loggedIn: true, user: req.session.user });
+  } else {
+    res.status(401).json({ loggedIn: false });
+  }
+});
 
 // ===== LOGOUT =====
 router.post('/logout', (req, res) => {

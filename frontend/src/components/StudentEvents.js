@@ -10,31 +10,17 @@ const StudentEvents = () => {
   const [registeredEvents, setRegisteredEvents] = useState([]);
   const [selectedTab, setSelectedTab] = useState('upcoming');
   const [selectedEvent, setSelectedEvent] = useState(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    checkLoginStatus();
-  }, []);
+    fetchEvents();
+    fetchRegisteredEvents();
 
-  const checkLoginStatus = async () => {
-    try {
-      const res = await axios.get('/api/student/check-auth'); // You must implement this endpoint in your backend.
-      if (res.status === 200) {
-        setIsAuthenticated(true);
-        fetchEvents();
-        fetchRegisteredEvents();
-
-        // Handle redirect post-login registration
-        const postLoginEventId = sessionStorage.getItem("registerAfterLogin");
-        if (postLoginEventId) {
-          handleRegister(postLoginEventId);
-          sessionStorage.removeItem("registerAfterLogin");
-        }
-      }
-    } catch (err) {
-      setIsAuthenticated(false);
+    const postLoginEventId = sessionStorage.getItem("registerAfterLogin");
+    if (postLoginEventId) {
+      handleRegister(postLoginEventId);
+      sessionStorage.removeItem("registerAfterLogin");
     }
-  };
+  }, []);
 
   const fetchEvents = async () => {
     try {
@@ -72,6 +58,7 @@ const StudentEvents = () => {
   };
 
   const today = new Date();
+
   const isPast = (date) => new Date(date) < today;
 
   const filteredEvents = {
@@ -83,11 +70,15 @@ const StudentEvents = () => {
 
   const getSectionTitle = () => {
     switch (selectedTab) {
-      case 'upcoming': return 'Upcoming Events';
-      case 'past': return 'Past Events';
-      case 'registered': return 'Your Registered Events';
+      case 'upcoming':
+        return 'Upcoming Events';
+      case 'past':
+        return 'Past Events';
+      case 'registered':
+        return 'Your Registered Events';
       case 'all':
-      default: return 'All Events';
+      default:
+        return 'All Events';
     }
   };
 
@@ -119,7 +110,9 @@ const StudentEvents = () => {
           }}
           disabled={isPastEvent || isRegistered}
           className={`mt-4 w-full py-2 rounded text-white ${
-            isPastEvent || isRegistered ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
+            isPastEvent || isRegistered
+              ? 'bg-gray-400 cursor-not-allowed'
+              : 'bg-blue-600 hover:bg-blue-700'
           }`}
         >
           {isPastEvent ? 'Registration Closed' : isRegistered ? 'Registered' : 'Register'}
@@ -134,43 +127,33 @@ const StudentEvents = () => {
 
       {/* Header */}
       <div className="relative bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-20 text-center">
-        <h1 className="text-4xl font-bold mb-2">{isAuthenticated ? getSectionTitle() : 'Welcome to Student Events Portal'}</h1>
-        <p className="italic text-yellow-300">
-          {isAuthenticated ? 'Find & Register for Campus Events' : 'Please log in to view and register for events.'}
-        </p>
+        <h1 className="text-4xl font-bold mb-2">{getSectionTitle()}</h1>
+        <p className="italic text-yellow-300">Find & Register for Campus Events</p>
       </div>
 
       {/* Tabs */}
-      {isAuthenticated && (
-        <div className="flex justify-center my-6 gap-2">
-          {['all', 'upcoming', 'past', 'registered'].map(tab => (
-            <button
-              key={tab}
-              onClick={() => setSelectedTab(tab)}
-              className={`px-4 py-2 rounded-full border ${
-                selectedTab === tab ? 'bg-purple-600 text-white' : 'bg-gray-100'
-              }`}
-            >
-              {tab.charAt(0).toUpperCase() + tab.slice(1)} Events
-            </button>
-          ))}
-        </div>
-      )}
+      <div className="flex justify-center my-6 gap-2">
+        {['all', 'upcoming', 'past', 'registered'].map(tab => (
+          <button
+            key={tab}
+            onClick={() => setSelectedTab(tab)}
+            className={`px-4 py-2 rounded-full border ${
+              selectedTab === tab ? 'bg-purple-600 text-white' : 'bg-gray-100'
+            }`}
+          >
+            {tab.charAt(0).toUpperCase() + tab.slice(1)} Events
+          </button>
+        ))}
+      </div>
 
       {/* Events Grid */}
-      {isAuthenticated ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 px-4 mb-16">
-          {filteredEvents[selectedTab].length > 0 ? (
-            filteredEvents[selectedTab].map(event => renderEventCard(event))
-          ) : (
-            <p className="text-center col-span-full">No events to display.</p>
-          )}
-        </div>
-      ) : (
-        <div className="text-center my-10 text-gray-700 text-lg">
-          You need to <a href="/login" className="text-blue-600 underline">log in</a> to view available events.
-        </div>
-      )}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 px-4 mb-16">
+        {filteredEvents[selectedTab].length > 0 ? (
+          filteredEvents[selectedTab].map(event => renderEventCard(event))
+        ) : (
+          <p className="text-center col-span-full">No events to display.</p>
+        )}
+      </div>
 
       {/* Modal */}
       {selectedEvent && (

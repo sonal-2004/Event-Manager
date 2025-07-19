@@ -11,22 +11,37 @@ const StudentEvents = () => {
   const [selectedTab, setSelectedTab] = useState('upcoming');
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isLoggedIn, setIsLoggedIn] = useState(null);
 
   useEffect(() => {
-    fetchEvents();
-    fetchRegisteredEvents();
-
-    const postLoginEventId = sessionStorage.getItem("registerAfterLogin");
-    if (postLoginEventId) {
-      handleRegister(postLoginEventId);
-      sessionStorage.removeItem("registerAfterLogin");
-    }
+    checkLogin();
   }, []);
+
+  const checkLogin = async () => {
+    try {
+      const res = await axios.get('/api/auth/check'); // 🔁 Replace with your actual login-check route
+      if (res.data?.user?.role === 'student') {
+        setIsLoggedIn(true);
+        fetchEvents();
+        fetchRegisteredEvents();
+
+        const postLoginEventId = sessionStorage.getItem("registerAfterLogin");
+        if (postLoginEventId) {
+          handleRegister(postLoginEventId);
+          sessionStorage.removeItem("registerAfterLogin");
+        }
+      } else {
+        setIsLoggedIn(false);
+      }
+    } catch (err) {
+      setIsLoggedIn(false);
+    }
+  };
 
   const fetchEvents = async () => {
     try {
       const res = await axios.get('/api/events/all');
-      setEvents(res.data);
+      setEvents(res.data.events || res.data); // handle both API styles
     } catch (error) {
       console.error('Failed to fetch events:', error);
     }
@@ -52,7 +67,7 @@ const StudentEvents = () => {
         window.location.href = "/login";
       } else if (error.response?.status === 400) {
         alert("ℹ You are already registered for this event.");
-        setRegisteredEvents(prev => [...prev, eventId]); // still update UI
+        setRegisteredEvents(prev => [...prev, eventId]);
       } else {
         alert("❌ Registration failed.");
       }
@@ -105,7 +120,7 @@ const StudentEvents = () => {
         <p>🎓 {event.club_name}</p>
         <p className="mt-2 text-gray-700 line-clamp-3">{event.description}</p>
 
-        {showButton && (
+        {showButton && isLoggedIn && (
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -121,6 +136,19 @@ const StudentEvents = () => {
             {isPastEvent ? 'Registration Closed' : isRegistered ? 'Registered' : 'Register'}
           </button>
         )}
+
+        {!isLoggedIn && showButton && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              sessionStorage.setItem("registerAfterLogin", event.id);
+              window.location.href = "/login";
+            }}
+            className="mt-4 w-full py-2 rounded text-white bg-blue-600 hover:bg-blue-700"
+          >
+            Login to Register
+          </button>
+        )}
       </div>
     );
   };
@@ -133,26 +161,27 @@ const StudentEvents = () => {
     <div>
       <Navbar />
 
-      {/* Header */}
       <div className="relative bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-20 text-center">
         <h1 className="text-4xl font-bold mb-2">{getSectionTitle()}</h1>
         <p className="italic text-yellow-300">Find & Register for Campus Events</p>
       </div>
 
-      {/* Tabs */}
-      <div className="flex justify-center my-6 gap-2">
-        {['all', 'upcoming', 'past', 'registered'].map(tab => (
-          <button
-            key={tab}
-            onClick={() => setSelectedTab(tab)}
-            className={`px-4 py-2 rounded-full border ${
-              selectedTab === tab ? 'bg-purple-600 text-white' : 'bg-gray-100'
-            }`}
-          >
-            {tab.charAt(0).toUpperCase() + tab.slice(1)} Events
-          </button>
-        ))}
-      </div>
+      {/* Tabs (only for logged in students) */}
+      {isLoggedIn && (
+        <div className="flex justify-center my-6 gap-2">
+          {['all', 'upcoming', 'past', 'registered'].map(tab => (
+            <button
+              key={tab}
+              onClick={() => setSelectedTab(tab)}
+              className={`px-4 py-2 rounded-full border ${
+                selectedTab === tab ? 'bg-purple-600 text-white' : 'bg-gray-100'
+              }`}
+            >
+              {tab.charAt(0).toUpperCase() + tab.slice(1)} Events
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Search */}
       <div className="flex justify-center mb-4 px-4">

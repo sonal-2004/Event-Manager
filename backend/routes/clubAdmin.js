@@ -47,7 +47,7 @@ router.post('/events', isClubAdmin, upload.single('poster'), async (req, res) =>
 // ===== Edit Event (with optional new poster) =====
 router.put('/event/:eventId', isClubAdmin, upload.single('poster'), async (req, res) => {
   const eventId = req.params.eventId;
-  const allowedFields = ['title', 'description', 'date', 'time', 'location'];
+  const allowedFields = ['title', 'description', 'date', 'time', 'location', 'event_type', 'club_name'];
   const updateFields = [];
   const values = [];
 
@@ -67,14 +67,20 @@ router.put('/event/:eventId', isClubAdmin, upload.single('poster'), async (req, 
     return res.status(400).json({ message: 'No fields provided for update' });
   }
 
-  values.push(eventId);
-  const query = `UPDATE events SET ${updateFields.join(', ')} WHERE id = ?`;
-
   try {
+    // Ensure the club admin owns the event before editing
+    const [check] = await db.execute('SELECT * FROM events WHERE id = ? AND created_by = ?', [eventId, req.user.id]);
+    if (check.length === 0) {
+      return res.status(403).json({ message: 'You are not authorized to edit this event.' });
+    }
+
+    values.push(eventId);
+    const query = `UPDATE events SET ${updateFields.join(', ')} WHERE id = ?`;
+
     await db.execute(query, values);
     res.json({ message: 'Event updated successfully' });
   } catch (err) {
-    console.error('Error updating event:', err);
+    console.error('❌ Error updating event:', err);
     res.status(500).json({ message: 'Error updating event' });
   }
 });

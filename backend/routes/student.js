@@ -11,7 +11,7 @@ const isStudent = (req, res, next) => {
   next();
 };
 
-// ✅ Register for event
+// ✅ Route: Register for an event
 router.post('/register/:eventId', isStudent, async (req, res) => {
   const studentId = req.session.user.id;
   const eventId = req.params.eventId;
@@ -26,40 +26,36 @@ router.post('/register/:eventId', isStudent, async (req, res) => {
       return res.status(400).json({ message: 'Already registered' });
     }
 
-    // Register the student
     await db.query(
       'INSERT INTO student_registrations (student_id, event_id) VALUES (?, ?)',
       [studentId, eventId]
     );
 
-    // Fetch student & event details
     const [[student]] = await db.query('SELECT name, email FROM students WHERE id = ?', [studentId]);
     const [[event]] = await db.query('SELECT title FROM events WHERE id = ?', [eventId]);
 
-    // ✅ Send confirmation email
+    // 📧 Optional: Send confirmation email
     await sendRegistrationEmail(student.email, student.name, event.title);
 
     res.status(200).json({ message: `Registered successfully for ${event.title}` });
   } catch (err) {
-    console.error('❌ Error registering:', err);
+    console.error('❌ Error in register route:', err);
     res.status(500).json({ message: 'Internal server error' });
   }
 });
 
-
-// ✅ Get all events
-router.get('/all', async (req, res) => {
+// ✅ Route: Get all events (for logged-in students only)
+router.get('/all', isStudent, async (req, res) => {
   try {
     const [events] = await db.query('SELECT * FROM events ORDER BY date ASC');
-    res.json({ events }); // ✅ Now frontend receives { events: [...] }
-
+    res.json(events);
   } catch (err) {
     console.error('❌ Error fetching events:', err.message);
     res.status(500).json({ message: 'Failed to retrieve events' });
   }
 });
 
-// ✅ Get registered events for logged-in student
+// ✅ Route: Get events student is registered for
 router.get('/registered', isStudent, async (req, res) => {
   try {
     const studentId = req.session.user.id;
@@ -74,8 +70,36 @@ router.get('/registered', isStudent, async (req, res) => {
 
     res.json(rows);
   } catch (err) {
-    console.error('❌ Error fetching registered events:', err);
+    console.error('❌ Error in /registered route:', err);
     res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// ✅ Route: Filter events by club_name and/or event_type
+router.get('/filter', isStudent, async (req, res) => {
+  const { club_name, event_type } = req.query;
+
+  let query = 'SELECT * FROM events WHERE 1=1';
+  const params = [];
+
+  if (club_name) {
+    query += ' AND club_name = ?';
+    params.push(club_name);
+  }
+
+  if (event_type) {
+    query += ' AND event_type = ?';
+    params.push(event_type);
+  }
+
+  query += ' ORDER BY date ASC';
+
+  try {
+    const [results] = await db.query(query, params);
+    res.json(results);
+  } catch (err) {
+    console.error('❌ Error filtering events:', err.message);
+    res.status(500).json({ error: 'Failed to retrieve filtered events' });
   }
 });
 

@@ -7,7 +7,7 @@ require('dotenv').config();
 
 const authRoutes = require('./routes/auth');
 const clubAdminRoutes = require('./routes/clubAdmin');
-const eventRoutes = require('./routes/events');
+//const eventRoutes = require('./routes/events');
 const studentRoutes = require('./routes/student');
 const cronRoutes = require('./routes/cron'); // ✅ Route for external cron job
 
@@ -40,7 +40,7 @@ app.use(session({
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/api/auth', authRoutes);
 app.use('/api/clubAdmin', clubAdminRoutes);
-app.use('/api/events', eventRoutes);
+//app.use('/api/events', eventRoutes);
 app.use('/api/student', studentRoutes);
 app.use('/api/cron', cronRoutes); // ✅ Route for reminders
 

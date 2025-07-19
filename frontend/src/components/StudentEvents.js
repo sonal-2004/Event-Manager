@@ -10,12 +10,12 @@ const StudentEvents = () => {
   const [registeredEvents, setRegisteredEvents] = useState([]);
   const [selectedTab, setSelectedTab] = useState('upcoming');
   const [selectedEvent, setSelectedEvent] = useState(null);
+  const [sortOption, setSortOption] = useState('date');
 
   useEffect(() => {
     fetchEvents();
     fetchRegisteredEvents();
 
-    // Check if redirected after login
     const postLoginEventId = sessionStorage.getItem("registerAfterLogin");
     if (postLoginEventId) {
       handleRegister(postLoginEventId);
@@ -69,18 +69,42 @@ const StudentEvents = () => {
     registered: events.filter(e => registeredEvents.includes(e.id)),
   };
 
+  // 🔁 Sorting Logic
+  const sortEvents = (eventList) => {
+    return [...eventList].sort((a, b) => {
+      switch (sortOption) {
+        case 'date':
+          return new Date(a.date) - new Date(b.date);
+        case 'time':
+          return a.time.localeCompare(b.time);
+        case 'club':
+          return a.club_name.localeCompare(b.club_name);
+        case 'type':
+          return a.type?.localeCompare(b.type || '') || 0;
+        default:
+          return 0;
+      }
+    });
+  };
+
   const getSectionTitle = () => {
+    let title = '';
     switch (selectedTab) {
       case 'upcoming':
-        return 'Upcoming Events';
+        title = 'Upcoming Events';
+        break;
       case 'past':
-        return 'Past Events';
+        title = 'Past Events';
+        break;
       case 'registered':
-        return 'Your Registered Events';
+        title = 'Your Registered Events';
+        break;
       case 'all':
       default:
-        return 'All Events';
+        title = 'All Events';
     }
+
+    return `${title} (Sorted by ${sortOption.charAt(0).toUpperCase() + sortOption.slice(1)})`;
   };
 
   const renderEventCard = (event) => {
@@ -128,8 +152,23 @@ const StudentEvents = () => {
         <p className="italic text-yellow-300">Find & Register for Campus Events</p>
       </div>
 
+      {/* Sort Dropdown */}
+      <div className="flex justify-center mt-6 mb-2">
+        <label className="mr-2 font-medium">Sort by:</label>
+        <select
+          value={sortOption}
+          onChange={(e) => setSortOption(e.target.value)}
+          className="px-4 py-2 border rounded bg-white shadow-sm"
+        >
+          <option value="date">Date</option>
+          <option value="time">Time</option>
+          <option value="club">Club Name</option>
+          <option value="type">Event Type</option>
+        </select>
+      </div>
+
       {/* Tabs */}
-      <div className="flex justify-center my-6 gap-2">
+      <div className="flex justify-center my-4 gap-2">
         {['all', 'upcoming', 'past', 'registered'].map(tab => (
           <button
             key={tab}
@@ -143,10 +182,10 @@ const StudentEvents = () => {
 
       {/* Events Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 px-4 mb-16">
-        {filteredEvents[selectedTab].length > 0 ? (
-          filteredEvents[selectedTab].map(event => renderEventCard(event))
+        {sortEvents(filteredEvents[selectedTab]).length > 0 ? (
+          sortEvents(filteredEvents[selectedTab]).map(event => renderEventCard(event))
         ) : (
-          <p className="text-center col-span-full">No events to display.</p>
+          <p className="text-center col-span-full">Please Login to See Events.</p>
         )}
       </div>
 

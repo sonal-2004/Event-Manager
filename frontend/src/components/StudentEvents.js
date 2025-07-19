@@ -10,7 +10,7 @@ const StudentEvents = () => {
   const [registeredEvents, setRegisteredEvents] = useState([]);
   const [selectedTab, setSelectedTab] = useState('upcoming');
   const [selectedEvent, setSelectedEvent] = useState(null);
-  const [sortOption, setSortOption] = useState('date');
+  const [sortBy, setSortBy] = useState(''); // date, time, type, club
 
   useEffect(() => {
     fetchEvents();
@@ -59,7 +59,6 @@ const StudentEvents = () => {
   };
 
   const today = new Date();
-
   const isPast = (date) => new Date(date) < today;
 
   const filteredEvents = {
@@ -69,42 +68,41 @@ const StudentEvents = () => {
     registered: events.filter(e => registeredEvents.includes(e.id)),
   };
 
-  // 🔁 Sorting Logic
-  const sortEvents = (eventList) => {
-    return [...eventList].sort((a, b) => {
-      switch (sortOption) {
-        case 'date':
-          return new Date(a.date) - new Date(b.date);
-        case 'time':
-          return a.time.localeCompare(b.time);
-        case 'club':
-          return a.club_name.localeCompare(b.club_name);
-        case 'type':
-          return a.type?.localeCompare(b.type || '') || 0;
-        default:
-          return 0;
-      }
-    });
+  const getSectionTitle = () => {
+    switch (selectedTab) {
+      case 'upcoming': return 'Upcoming Events';
+      case 'past': return 'Past Events';
+      case 'registered': return 'Your Registered Events';
+      case 'all':
+      default: return 'All Events';
+    }
   };
 
-  const getSectionTitle = () => {
-    let title = '';
-    switch (selectedTab) {
-      case 'upcoming':
-        title = 'Upcoming Events';
-        break;
-      case 'past':
-        title = 'Past Events';
-        break;
-      case 'registered':
-        title = 'Your Registered Events';
-        break;
-      case 'all':
-      default:
-        title = 'All Events';
-    }
+  const groupEvents = (eventList) => {
+    if (!sortBy) return { 'All Events': eventList };
 
-    return `${title} (Sorted by ${sortOption.charAt(0).toUpperCase() + sortOption.slice(1)})`;
+    return eventList.reduce((acc, event) => {
+      let key = '';
+      switch (sortBy) {
+        case 'date':
+          key = new Date(event.date).toLocaleDateString();
+          break;
+        case 'time':
+          key = new Date('1970-01-01T' + event.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          break;
+        case 'type':
+          key = event.type || 'No Type'; // Assumes event.type exists
+          break;
+        case 'club':
+          key = event.club_name || 'No Club';
+          break;
+        default:
+          key = 'Other';
+      }
+      acc[key] = acc[key] || [];
+      acc[key].push(event);
+      return acc;
+    }, {});
   };
 
   const renderEventCard = (event) => {
@@ -142,6 +140,8 @@ const StudentEvents = () => {
     );
   };
 
+  const grouped = groupEvents(filteredEvents[selectedTab]);
+
   return (
     <div>
       <Navbar />
@@ -150,21 +150,6 @@ const StudentEvents = () => {
       <div className="relative bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-20 text-center">
         <h1 className="text-4xl font-bold mb-2">{getSectionTitle()}</h1>
         <p className="italic text-yellow-300">Find & Register for Campus Events</p>
-      </div>
-
-      {/* Sort Dropdown */}
-      <div className="flex justify-center mt-6 mb-2">
-        <label className="mr-2 font-medium">Sort by:</label>
-        <select
-          value={sortOption}
-          onChange={(e) => setSortOption(e.target.value)}
-          className="px-4 py-2 border rounded bg-white shadow-sm"
-        >
-          <option value="date">Date</option>
-          <option value="time">Time</option>
-          <option value="club">Club Name</option>
-          <option value="type">Event Type</option>
-        </select>
       </div>
 
       {/* Tabs */}
@@ -180,12 +165,36 @@ const StudentEvents = () => {
         ))}
       </div>
 
-      {/* Events Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 px-4 mb-16">
-        {sortEvents(filteredEvents[selectedTab]).length > 0 ? (
-          sortEvents(filteredEvents[selectedTab]).map(event => renderEventCard(event))
+      {/* Sort Dropdown */}
+      {events.length > 0 && (
+        <div className="flex justify-center my-6">
+          <select
+            value={sortBy}
+            onChange={e => setSortBy(e.target.value)}
+            className="border px-4 py-2 rounded"
+          >
+            <option value="">Sort By</option>
+            <option value="date">📅 Date</option>
+            <option value="time">🕒 Time</option>
+            <option value="type">📂 Event Type</option>
+            <option value="club">🎓 Club Name</option>
+          </select>
+        </div>
+      )}
+
+      {/* Grouped Events */}
+      <div className="px-4 mb-16">
+        {Object.keys(grouped).length === 0 ? (
+          <p className="text-center">Please Login to See Events.</p>
         ) : (
-          <p className="text-center col-span-full">Please Login to See Events.</p>
+          Object.entries(grouped).map(([groupTitle, groupEvents]) => (
+            <div key={groupTitle} className="mb-10">
+              <h2 className="text-xl font-semibold mb-4 text-center text-purple-700">{groupTitle}</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {groupEvents.map(event => renderEventCard(event))}
+              </div>
+            </div>
+          ))
         )}
       </div>
 

@@ -110,7 +110,9 @@ const StudentEvents = () => {
             if (!isPastEvent && !isRegistered) handleRegister(event.id);
           }}
           disabled={isPastEvent || isRegistered}
-          className={`mt-4 w-full py-2 rounded text-white ${isPastEvent || isRegistered ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
+          className={`mt-4 w-full py-2 rounded text-white ${
+            isPastEvent || isRegistered ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
+          }`}
         >
           {isPastEvent ? 'Registration Closed' : isRegistered ? 'Registered' : 'Register'}
         </button>
@@ -134,7 +136,9 @@ const StudentEvents = () => {
           <button
             key={tab}
             onClick={() => setSelectedTab(tab)}
-            className={`px-4 py-2 rounded-full border ${selectedTab === tab ? 'bg-purple-600 text-white' : 'bg-gray-100'}`}
+            className={`px-4 py-2 rounded-full border ${
+              selectedTab === tab ? 'bg-purple-600 text-white' : 'bg-gray-100'
+            }`}
           >
             {tab.charAt(0).toUpperCase() + tab.slice(1)} Events
           </button>
@@ -146,7 +150,7 @@ const StudentEvents = () => {
         {filteredEvents[selectedTab].length > 0 ? (
           filteredEvents[selectedTab].map(event => renderEventCard(event))
         ) : (
-          <p className="text-center col-span-full">Please Login to See .</p>
+          <p className="text-center col-span-full">No events to display.</p>
         )}
       </div>
 

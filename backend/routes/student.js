@@ -43,17 +43,28 @@ router.post('/register/:eventId', isStudent, async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 });
-
-// ✅ Route: Get all events (for logged-in students only)
-router.get('/all', isStudent, async (req, res) => {
+router.get('/test-email', async (req, res) => {
   try {
-    const [events] = await db.query('SELECT * FROM events ORDER BY date ASC');
-    res.json(events);
-  } catch (err) {
-    console.error('❌ Error fetching events:', err.message);
-    res.status(500).json({ message: 'Failed to retrieve events' });
+    await sendRegistrationEmail('deshmukhsayali080804@gmail.com', 'Test User', 'Test Event');
+    res.send('Test email sent!');
+  } catch (error) {
+    console.error('Test email error:', error);
+    res.status(500).send('Failed to send test email');
   }
 });
+
+// ✅ Route: Get all events (for logged-in students only)
+// Unique club names
+router.get('/clubs', async (req, res) => {
+  try {
+    const [clubs] = await db.query('SELECT DISTINCT club_name FROM events');
+    res.json(clubs.map(c => c.club_name));
+  } catch (err) {
+    console.error('❌ Error fetching club names:', err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
 
 // ✅ Route: Get events student is registered for
 router.get('/registered', isStudent, async (req, res) => {

@@ -9,6 +9,13 @@ const transporter = nodemailer.createTransport({
     pass: process.env.EMAIL_PASS,
   },
 });
+transporter.verify(function (error, success) {
+  if (error) {
+    console.error('Transporter verification failed:', error);
+  } else {
+    console.log('Server is ready to take messages');
+  }
+});
 
 // Function to send registration confirmation email
 const sendRegistrationEmail = async (toEmail, userName, eventName) => {

@@ -45,6 +45,7 @@ router.post('/events', isClubAdmin, upload.single('poster'), async (req, res) =>
 
 
 // ===== Edit Event (with optional new poster) =====
+// ===== Edit Event (with optional new poster) =====
 router.put('/event/:eventId', isClubAdmin, upload.single('poster'), async (req, res) => {
   const eventId = req.params.eventId;
   const allowedFields = ['title', 'description', 'date', 'time', 'location', 'event_type', 'club_name'];
@@ -52,9 +53,9 @@ router.put('/event/:eventId', isClubAdmin, upload.single('poster'), async (req, 
   const values = [];
 
   for (const field of allowedFields) {
-    if (req.body[field] !== undefined) {
+    if (req.body[field] && req.body[field].trim() !== '') {
       updateFields.push(`${field} = ?`);
-      values.push(req.body[field]);
+      values.push(req.body[field].trim());
     }
   }
 
@@ -64,24 +65,23 @@ router.put('/event/:eventId', isClubAdmin, upload.single('poster'), async (req, 
   }
 
   if (updateFields.length === 0) {
-    return res.status(400).json({ message: 'No fields provided for update' });
+    return res.status(400).json({ message: 'No valid fields provided for update' });
   }
 
   try {
-    // Ensure the club admin owns the event before editing
     const [check] = await db.execute('SELECT * FROM events WHERE id = ? AND created_by = ?', [eventId, req.user.id]);
     if (check.length === 0) {
-      return res.status(403).json({ message: 'You are not authorized to edit this event.' });
+      return res.status(403).json({ message: 'Unauthorized to edit this event.' });
     }
 
+    const updateQuery = `UPDATE events SET ${updateFields.join(', ')} WHERE id = ?`;
     values.push(eventId);
-    const query = `UPDATE events SET ${updateFields.join(', ')} WHERE id = ?`;
+    await db.execute(updateQuery, values);
 
-    await db.execute(query, values);
     res.json({ message: 'Event updated successfully' });
   } catch (err) {
     console.error('❌ Error updating event:', err);
-    res.status(500).json({ message: 'Error updating event' });
+    res.status(500).json({ message: 'Internal server error while updating event' });
   }
 });
 

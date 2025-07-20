@@ -27,6 +27,14 @@ const Signup = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
+    // Phone number validation: exactly 10 digits
+    const phoneRegex = /^\d{10}$/;
+    if (!phoneRegex.test(form.phone)) {
+      setError('📱 Please enter a valid 10-digit phone number.');
+      return;
+    }
+
     try {
       const res = await axios.post('/api/auth/signup', form);
       alert(res.data.message);
@@ -37,12 +45,11 @@ const Signup = () => {
   };
 
   return (
-    <div className="flex justify-center items-center h-80vh bg-gradient-to-r from-indigo-600 to-purple-600">
+    <div className="flex justify-center items-center min-h-screen bg-gradient-to-r from-indigo-600 to-purple-600">
       <form
         onSubmit={handleSubmit}
         className="bg-white p-8 rounded-xl shadow-md w-full max-w-md space-y-4"
       >
-        {/* Header Section */}
         <h2 className="text-3xl font-bold text-center text-purple-700 mb-1">
           Welcome to Campus Events
         </h2>
@@ -100,8 +107,9 @@ const Signup = () => {
             name="phone"
             value={form.phone}
             onChange={handleChange}
-            placeholder="Phone Number"
+            placeholder="Phone Number (10 digits)"
             required
+            maxLength={10}
             className="border rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
           />
           <input

@@ -12,7 +12,6 @@ const StudentEvents = () => {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoggedIn, setIsLoggedIn] = useState(null);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     checkLogin();
@@ -23,25 +22,19 @@ const StudentEvents = () => {
       const res = await axios.get('/api/auth/check');
       if (res.data?.user?.role === 'student') {
         setIsLoggedIn(true);
-        await fetchEvents();
-        await fetchRegisteredEvents();
+        fetchEvents();
+        fetchRegisteredEvents();
 
         const postLoginEventId = sessionStorage.getItem("registerAfterLogin");
         if (postLoginEventId) {
+          handleRegister(postLoginEventId);
           sessionStorage.removeItem("registerAfterLogin");
-
-          // ✅ Optional: short delay to ensure everything is ready
-          setTimeout(() => {
-            handleRegister(postLoginEventId);
-          }, 200); 
         }
       } else {
         setIsLoggedIn(false);
       }
     } catch (err) {
       setIsLoggedIn(false);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -72,17 +65,18 @@ const StudentEvents = () => {
       if (error.response?.status === 401 || error.response?.status === 403) {
         sessionStorage.setItem("registerAfterLogin", eventId);
         window.location.href = "/login";
-      } else if (error.response?.status === 400 || error.response?.status === 409) {
+      } else if (error.response?.status === 400) {
         alert("ℹ You are already registered for this event.");
         setRegisteredEvents(prev => [...prev, eventId]);
       } else {
+        console.error("Registration error:", error);
         alert("❌ Registration failed.");
       }
     }
   };
 
   const today = new Date();
-  const isPast = (date) => new Date(date) < today.setHours(0, 0, 0, 0);
+  const isPast = (date) => new Date(date) < today;
 
   const filteredEvents = {
     all: events,
@@ -163,14 +157,6 @@ const StudentEvents = () => {
   const filteredAndSearchedEvents = filteredEvents[selectedTab].filter(event =>
     event.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p>Loading events...</p>
-      </div>
-    );
-  }
 
   return (
     <div>

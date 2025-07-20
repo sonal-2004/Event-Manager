@@ -12,6 +12,7 @@ const StudentEvents = () => {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoggedIn, setIsLoggedIn] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     checkLogin();
@@ -19,29 +20,35 @@ const StudentEvents = () => {
 
   const checkLogin = async () => {
     try {
-      const res = await axios.get('/api/auth/check'); // 🔁 Replace with your actual login-check route
+      const res = await axios.get('/api/auth/check');
       if (res.data?.user?.role === 'student') {
         setIsLoggedIn(true);
-        fetchEvents();
-        fetchRegisteredEvents();
+        await fetchEvents();
+        await fetchRegisteredEvents();
 
         const postLoginEventId = sessionStorage.getItem("registerAfterLogin");
         if (postLoginEventId) {
-          handleRegister(postLoginEventId);
           sessionStorage.removeItem("registerAfterLogin");
+
+          // ✅ Optional: short delay to ensure everything is ready
+          setTimeout(() => {
+            handleRegister(postLoginEventId);
+          }, 200); 
         }
       } else {
         setIsLoggedIn(false);
       }
     } catch (err) {
       setIsLoggedIn(false);
+    } finally {
+      setLoading(false);
     }
   };
 
   const fetchEvents = async () => {
     try {
       const res = await axios.get('/api/events/all');
-      setEvents(res.data.events || res.data); // handle both API styles
+      setEvents(res.data.events || res.data);
     } catch (error) {
       console.error('Failed to fetch events:', error);
     }
@@ -65,7 +72,7 @@ const StudentEvents = () => {
       if (error.response?.status === 401 || error.response?.status === 403) {
         sessionStorage.setItem("registerAfterLogin", eventId);
         window.location.href = "/login";
-      } else if (error.response?.status === 400) {
+      } else if (error.response?.status === 400 || error.response?.status === 409) {
         alert("ℹ You are already registered for this event.");
         setRegisteredEvents(prev => [...prev, eventId]);
       } else {
@@ -75,7 +82,7 @@ const StudentEvents = () => {
   };
 
   const today = new Date();
-  const isPast = (date) => new Date(date) < today;
+  const isPast = (date) => new Date(date) < today.setHours(0, 0, 0, 0);
 
   const filteredEvents = {
     all: events,
@@ -157,6 +164,14 @@ const StudentEvents = () => {
     event.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p>Loading events...</p>
+      </div>
+    );
+  }
+
   return (
     <div>
       <Navbar />
@@ -166,7 +181,6 @@ const StudentEvents = () => {
         <p className="italic text-yellow-300">Find & Register for Campus Events</p>
       </div>
 
-      {/* Tabs (only for logged in students) */}
       {isLoggedIn && (
         <div className="flex justify-center my-6 gap-2">
           {['all', 'upcoming', 'past', 'registered'].map(tab => (
@@ -183,7 +197,6 @@ const StudentEvents = () => {
         </div>
       )}
 
-      {/* Search */}
       <div className="flex justify-center mb-4 px-4">
         <input
           type="text"
@@ -194,7 +207,6 @@ const StudentEvents = () => {
         />
       </div>
 
-      {/* Events Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 px-4 mb-16">
         {filteredAndSearchedEvents.length > 0 ? (
           filteredAndSearchedEvents.map(event => renderEventCard(event))
@@ -203,7 +215,6 @@ const StudentEvents = () => {
         )}
       </div>
 
-      {/* Modal */}
       {selectedEvent && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-xl w-full relative overflow-y-auto max-h-[90vh]">
@@ -231,7 +242,6 @@ const StudentEvents = () => {
         </div>
       )}
 
-      {/* Footer */}
       <footer className="bg-purple-800 text-white py-8 text-center">
         <p>&copy; {new Date().getFullYear()} Student Events Portal. All rights reserved.</p>
       </footer>

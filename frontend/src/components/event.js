@@ -80,46 +80,49 @@ const Event = () => {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!validateForm()) return;
+  e.preventDefault();
+  if (!validateForm()) return;
 
-    const data = new FormData();
-    Object.entries(formData).forEach(([key, value]) => {
-      if (value) data.append(key, value);
-    });
-
-    try {
-      if (isEditMode && eventToEdit) {
-        await axios.put(`/api/clubAdmin/event/${eventToEdit.id}`, data, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
-        setSuccessMessage('✅ Event updated successfully!');
-      } else {
-        await axios.post('/api/clubAdmin/events', data);
-        setSuccessMessage('✅ Event created successfully!');
-      }
-      fetchMyEvents();
-      resetForm();
-      setTimeout(() => setSuccessMessage(''), 3000);
-    } catch (err) {
-      console.error(err);
-      alert('❌ Failed to save event');
+  const data = new FormData();
+  Object.entries(formData).forEach(([key, value]) => {
+    if (value !== null && value !== '') {
+      data.append(key, value);
     }
-  };
+  });
+
+  try {
+    if (isEditMode && eventToEdit) {
+      await axios.put(`/api/clubAdmin/event/${eventToEdit.id}`, data, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      setSuccessMessage('✅ Event updated successfully!');
+    } else {
+      await axios.post('/api/clubAdmin/events', data);
+      setSuccessMessage('✅ Event created successfully!');
+    }
+    fetchMyEvents();
+    resetForm();
+    setTimeout(() => setSuccessMessage(''), 3000);
+  } catch (err) {
+    console.error('❌ Error saving event:', err);
+    alert('❌ Failed to save event');
+  }
+};
 
   const handleEdit = (event) => {
     setIsEditMode(true);
     setEventToEdit(event);
     setFormData({
-      title: event.title || '',
-      description: event.description || '',
-      date: event.date || '',
-      time: event.time || '',
-      location: event.location || '',
-      club_name: event.club_name || '',
-      event_type: event.event_type || '',
-      poster: null,
-    });
+  title: event.title || '',
+  description: event.description || '',
+  date: new Date(event.date).toISOString().slice(0, 10),
+  time: event.time.slice(0, 5),
+  location: event.location || '',
+  club_name: event.club_name || '',
+  event_type: event.event_type || '',
+  poster: null,
+});
+
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 

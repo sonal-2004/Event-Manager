@@ -35,7 +35,12 @@ router.post('/register/:eventId', isStudent, async (req, res) => {
     const [[event]] = await db.query('SELECT title FROM events WHERE id = ?', [eventId]);
 
     // 📧 Optional: Send confirmation email
-    await sendRegistrationEmail(student.email, student.name, event.title);
+    try {
+  await sendRegistrationEmail(student.email, student.name, event.title);
+} catch (emailError) {
+  console.error('Failed to send registration email:', emailError);
+}
+
 
     res.status(200).json({ message: `Registered successfully for ${event.title}` });
   } catch (err) {

@@ -31,14 +31,15 @@ const StudentEvents = () => {
     }
   };
 
-  const fetchRegisteredEvents = async () => {
-    try {
-      const res = await axios.get('/api/student/registered');
-      setRegisteredEvents(res.data.map(e => e.id));
-    } catch (error) {
-      console.error('Failed to fetch registered events:', error);
-    }
-  };
+ const fetchRegisteredEvents = async () => {
+  try {
+    const res = await axios.get('/api/student/registered');
+    setRegisteredEvents(res.data);
+  } catch (error) {
+    console.error('Failed to fetch registered events:', error);
+  }
+};
+
 
   const handleRegister = async (eventId) => {
     try {
@@ -64,7 +65,8 @@ const StudentEvents = () => {
     all: events,
     upcoming: events.filter(e => !isPast(e.date)),
     past: events.filter(e => isPast(e.date)),
-    registered: events.filter(e => registeredEvents.includes(e.id)),
+   registered: events.filter(e => registeredEvents.some(r => r.id === e.id)),
+
   };
 
   const getSectionTitle = () => {
@@ -83,7 +85,8 @@ const StudentEvents = () => {
 
   const renderEventCard = (event) => {
     const isPastEvent = isPast(event.date);
-    const isRegistered = registeredEvents.includes(event.id);
+   const isRegistered = registeredEvents.some(e => e.id === event.id);
+
 
     return (
       <div

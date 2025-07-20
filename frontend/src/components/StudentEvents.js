@@ -17,18 +17,28 @@ const StudentEvents = () => {
       await fetchRegisteredEvents();
       await fetchEvents();
 
+      // Auto-register only if login is successful and both fetches are done
       const postLoginEventId = sessionStorage.getItem("registerAfterLogin");
       if (postLoginEventId) {
-        handleRegister(Number(postLoginEventId));
         sessionStorage.removeItem("registerAfterLogin");
+        // Add a slight delay to ensure backend session is ready
+        setTimeout(() => {
+          handleRegister(Number(postLoginEventId));
+        }, 500);
       }
     } catch (err) {
       console.error("User not logged in, redirecting to login.");
+      // Save attempted event before redirecting
+      const url = new URL(window.location.href);
+      const eventToRegister = url.searchParams.get("register");
+      if (eventToRegister) {
+        sessionStorage.setItem("registerAfterLogin", eventToRegister);
+      }
       window.location.href = "/login";
     }
   };
 
-  fetchData(); // ← You were missing this!
+  fetchData();
 }, []);
 
 
@@ -121,7 +131,9 @@ const StudentEvents = () => {
         <button
           onClick={(e) => {
             e.stopPropagation();
-            if (!isPastEvent && !isRegistered) handleRegister(event.id);
+            if (!isPastEvent && !isRegistered) sessionStorage.setItem("registerAfterLogin", event.id.toString());
+window.location.href = "/login";
+
           }}
           disabled={isPastEvent || isRegistered}
           className={`mt-4 w-full py-2 rounded text-white ${

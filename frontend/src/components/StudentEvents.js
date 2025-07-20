@@ -10,38 +10,23 @@ const StudentEvents = () => {
   const [registeredEvents, setRegisteredEvents] = useState([]);
   const [selectedTab, setSelectedTab] = useState('upcoming');
   const [selectedEvent, setSelectedEvent] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [isLoggedIn, setIsLoggedIn] = useState(null);
 
   useEffect(() => {
-    checkLogin();
-  }, []);
+    fetchEvents();
+    fetchRegisteredEvents();
 
-  const checkLogin = async () => {
-    try {
-      const res = await axios.get('/api/auth/check');
-      if (res.data?.user?.role === 'student') {
-        setIsLoggedIn(true);
-        fetchEvents();
-        fetchRegisteredEvents();
-
-        const postLoginEventId = sessionStorage.getItem("registerAfterLogin");
-        if (postLoginEventId) {
-          handleRegister(postLoginEventId);
-          sessionStorage.removeItem("registerAfterLogin");
-        }
-      } else {
-        setIsLoggedIn(false);
-      }
-    } catch (err) {
-      setIsLoggedIn(false);
+    // Register after login
+    const postLoginEventId = sessionStorage.getItem("registerAfterLogin");
+    if (postLoginEventId) {
+      handleRegister(postLoginEventId);
+      sessionStorage.removeItem("registerAfterLogin");
     }
-  };
+  }, []);
 
   const fetchEvents = async () => {
     try {
       const res = await axios.get('/api/events/all');
-      setEvents(res.data.events || res.data);
+      setEvents(res.data);
     } catch (error) {
       console.error('Failed to fetch events:', error);
     }
@@ -60,22 +45,22 @@ const StudentEvents = () => {
     try {
       await axios.post(`/api/student/register/${eventId}`);
       alert("✅ Registration successful!");
-      setRegisteredEvents(prev => [...prev, eventId]);
+      fetchRegisteredEvents();
     } catch (error) {
       if (error.response?.status === 401 || error.response?.status === 403) {
         sessionStorage.setItem("registerAfterLogin", eventId);
         window.location.href = "/login";
       } else if (error.response?.status === 400) {
         alert("ℹ You are already registered for this event.");
-        setRegisteredEvents(prev => [...prev, eventId]);
       } else {
-        console.error("Registration error:", error);
         alert("❌ Registration failed.");
+        console.error(error);
       }
     }
   };
 
   const today = new Date();
+
   const isPast = (date) => new Date(date) < today;
 
   const filteredEvents = {
@@ -87,18 +72,21 @@ const StudentEvents = () => {
 
   const getSectionTitle = () => {
     switch (selectedTab) {
-      case 'upcoming': return 'Upcoming Events';
-      case 'past': return 'Past Events';
-      case 'registered': return 'Your Registered Events';
+      case 'upcoming':
+        return 'Upcoming Events';
+      case 'past':
+        return 'Past Events';
+      case 'registered':
+        return 'Your Registered Events';
       case 'all':
-      default: return 'All Events';
+      default:
+        return 'All Events';
     }
   };
 
   const renderEventCard = (event) => {
     const isPastEvent = isPast(event.date);
     const isRegistered = registeredEvents.includes(event.id);
-    const showButton = !isPastEvent;
 
     return (
       <div
@@ -112,95 +100,63 @@ const StudentEvents = () => {
         <h3 className="text-lg font-bold">{event.title}</h3>
         <p className="text-sm text-gray-600">
           📅 {new Date(event.date).toLocaleDateString()} | 🕒{' '}
-          {new Date('1970-01-01T' + event.time).toLocaleTimeString([], {
-            hour: '2-digit',
-            minute: '2-digit',
-          })}
+          {new Date(`1970-01-01T${event.time}`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </p>
         <p>📍 {event.location}</p>
         <p>🎓 {event.club_name}</p>
         <p className="mt-2 text-gray-700 line-clamp-3">{event.description}</p>
 
-        {showButton && isLoggedIn && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              if (!isRegistered) handleRegister(event.id);
-            }}
-            disabled={isPastEvent || isRegistered}
-            className={`mt-4 w-full py-2 rounded text-white ${
-              isPastEvent || isRegistered
-                ? 'bg-gray-400 cursor-not-allowed'
-                : 'bg-blue-600 hover:bg-blue-700'
-            }`}
-          >
-            {isPastEvent ? 'Registration Closed' : isRegistered ? 'Registered' : 'Register'}
-          </button>
-        )}
-
-        {!isLoggedIn && showButton && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              sessionStorage.setItem("registerAfterLogin", event.id);
-              window.location.href = "/login";
-            }}
-            className="mt-4 w-full py-2 rounded text-white bg-blue-600 hover:bg-blue-700"
-          >
-            Login to Register
-          </button>
-        )}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            if (!isPastEvent && !isRegistered) handleRegister(event.id);
+          }}
+          disabled={isPastEvent || isRegistered}
+          className={`mt-4 w-full py-2 rounded text-white ${
+            isPastEvent || isRegistered ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
+          }`}
+        >
+          {isPastEvent ? 'Registration Closed' : isRegistered ? 'Registered' : 'Register'}
+        </button>
       </div>
     );
   };
-
-  const filteredAndSearchedEvents = filteredEvents[selectedTab].filter(event =>
-    event.title.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   return (
     <div>
       <Navbar />
 
+      {/* Header */}
       <div className="relative bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-20 text-center">
         <h1 className="text-4xl font-bold mb-2">{getSectionTitle()}</h1>
         <p className="italic text-yellow-300">Find & Register for Campus Events</p>
       </div>
 
-      {isLoggedIn && (
-        <div className="flex justify-center my-6 gap-2">
-          {['all', 'upcoming', 'past', 'registered'].map(tab => (
-            <button
-              key={tab}
-              onClick={() => setSelectedTab(tab)}
-              className={`px-4 py-2 rounded-full border ${
-                selectedTab === tab ? 'bg-purple-600 text-white' : 'bg-gray-100'
-              }`}
-            >
-              {tab.charAt(0).toUpperCase() + tab.slice(1)} Events
-            </button>
-          ))}
-        </div>
-      )}
-
-      <div className="flex justify-center mb-4 px-4">
-        <input
-          type="text"
-          placeholder="🔍 Search events by title..."
-          className="w-full max-w-lg border rounded px-4 py-2"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
+      {/* Tabs */}
+      <div className="flex justify-center my-6 gap-2">
+        {['all', 'upcoming', 'past', 'registered'].map(tab => (
+          <button
+            key={tab}
+            onClick={() => setSelectedTab(tab)}
+            className={`px-4 py-2 rounded-full border ${
+              selectedTab === tab ? 'bg-purple-600 text-white' : 'bg-gray-100'
+            }`}
+          >
+            {tab.charAt(0).toUpperCase() + tab.slice(1)} Events
+          </button>
+        ))}
       </div>
 
+      {/* Events Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 px-4 mb-16">
-        {filteredAndSearchedEvents.length > 0 ? (
-          filteredAndSearchedEvents.map(event => renderEventCard(event))
+        {filteredEvents[selectedTab].length > 0 ? (
+          filteredEvents[selectedTab].map(event => renderEventCard(event))
         ) : (
           <p className="text-center col-span-full">No events to display.</p>
         )}
       </div>
 
+      {/* Modal */}
       {selectedEvent && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-xl w-full relative overflow-y-auto max-h-[90vh]">
@@ -216,7 +172,7 @@ const StudentEvents = () => {
             <h2 className="text-xl font-bold mb-2">{selectedEvent.title}</h2>
             <p>
               📅 {new Date(selectedEvent.date).toLocaleDateString()} | 🕒{' '}
-              {new Date('1970-01-01T' + selectedEvent.time).toLocaleTimeString([], {
+              {new Date(`1970-01-01T${selectedEvent.time}`).toLocaleTimeString([], {
                 hour: '2-digit',
                 minute: '2-digit',
               })}
@@ -228,6 +184,7 @@ const StudentEvents = () => {
         </div>
       )}
 
+      {/* Footer */}
       <footer className="bg-purple-800 text-white py-8 text-center">
         <p>&copy; {new Date().getFullYear()} Student Events Portal. All rights reserved.</p>
       </footer>

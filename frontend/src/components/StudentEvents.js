@@ -60,18 +60,19 @@ const StudentEvents = () => {
     setTimeout(fetchRegisteredEvents, 1000);
   } catch (error) {
     if (error.response?.status === 401 || error.response?.status === 403) {
+      // Do not show "Registration failed" alert
       sessionStorage.setItem("registerAfterLogin", eventId.toString());
       window.location.href = "/login";
     } else if (error.response?.status === 400) {
       alert("ℹ You are already registered for this event.");
-      // Optionally update UI anyway
       setRegisteredEvents((prev) => [...prev, eventId]);
     } else {
       console.error("❌ Registration failed:", error);
-      alert("❌ Registration failed.");
+      alert("❌ Something went wrong. Please try again.");
     }
   }
 };
+
 
   const today = new Date();
   const isPast = (date) => new Date(date) < today;

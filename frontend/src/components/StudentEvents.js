@@ -15,7 +15,6 @@ const StudentEvents = () => {
     fetchEvents();
     fetchRegisteredEvents();
 
-    // Register after login
     const postLoginEventId = sessionStorage.getItem("registerAfterLogin");
     if (postLoginEventId) {
       handleRegister(postLoginEventId);
@@ -54,13 +53,11 @@ const StudentEvents = () => {
         alert("ℹ You are already registered for this event.");
       } else {
         alert("❌ Registration failed.");
-        console.error(error);
       }
     }
   };
 
   const today = new Date();
-
   const isPast = (date) => new Date(date) < today;
 
   const filteredEvents = {
@@ -99,8 +96,7 @@ const StudentEvents = () => {
         )}
         <h3 className="text-lg font-bold">{event.title}</h3>
         <p className="text-sm text-gray-600">
-          📅 {new Date(event.date).toLocaleDateString()} | 🕒{' '}
-          {new Date(`1970-01-01T${event.time}`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          📅 {new Date(event.date).toLocaleDateString()} | 🕒 {new Date('1970-01-01T' + event.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </p>
         <p>📍 {event.location}</p>
         <p>🎓 {event.club_name}</p>
@@ -172,7 +168,7 @@ const StudentEvents = () => {
             <h2 className="text-xl font-bold mb-2">{selectedEvent.title}</h2>
             <p>
               📅 {new Date(selectedEvent.date).toLocaleDateString()} | 🕒{' '}
-              {new Date(`1970-01-01T${selectedEvent.time}`).toLocaleTimeString([], {
+              {new Date('1970-01-01T' + selectedEvent.time).toLocaleTimeString([], {
                 hour: '2-digit',
                 minute: '2-digit',
               })}

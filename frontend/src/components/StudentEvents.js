@@ -10,28 +10,25 @@ const StudentEvents = () => {
   const [registeredEvents, setRegisteredEvents] = useState([]);
   const [selectedTab, setSelectedTab] = useState('upcoming');
   const [selectedEvent, setSelectedEvent] = useState(null);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
-    const checkAuthAndFetchData = async () => {
+    const fetchData = async () => {
       try {
-        await fetchRegisteredEvents(); // will throw if not logged in
-        setIsLoggedIn(true);
+        await fetchRegisteredEvents();
         await fetchEvents();
 
         const postLoginEventId = sessionStorage.getItem("registerAfterLogin");
         if (postLoginEventId) {
-          await handleRegister(Number(postLoginEventId));
+          handleRegister(Number(postLoginEventId));
           sessionStorage.removeItem("registerAfterLogin");
         }
       } catch (err) {
-        setIsLoggedIn(false);
         console.error("User not logged in, redirecting to login.");
         window.location.href = "/login";
       }
     };
 
-    checkAuthAndFetchData();
+    fetchData();
   }, []);
 
   useEffect(() => {
@@ -53,18 +50,11 @@ const StudentEvents = () => {
       const registeredIds = res.data.map((e) => e.event_id || e.id);
       setRegisteredEvents(registeredIds);
     } catch (error) {
-      // Propagate error to trigger login redirect
-      throw error;
+      console.error('Failed to fetch registered events:', error);
     }
   };
 
   const handleRegister = async (eventId) => {
-    if (!isLoggedIn) {
-      alert("Please login to register for events.");
-      window.location.href = "/login";
-      return;
-    }
-
     try {
       await axios.post(`/api/student/register/${eventId}`);
       alert("✅ Registration successful!");
@@ -130,11 +120,6 @@ const StudentEvents = () => {
         <button
           onClick={(e) => {
             e.stopPropagation();
-            if (!isLoggedIn) {
-              alert("Please login to register for events.");
-              window.location.href = "/login";
-              return;
-            }
             if (!isPastEvent && !isRegistered) handleRegister(event.id);
           }}
           disabled={isPastEvent || isRegistered}
@@ -149,15 +134,6 @@ const StudentEvents = () => {
       </div>
     );
   };
-
-  if (!isLoggedIn) {
-    // Optionally show a loading or redirect message
-    return (
-      <div className="text-center py-20">
-        <p>Please login to view events. Redirecting...</p>
-      </div>
-    );
-  }
 
   return (
     <div>

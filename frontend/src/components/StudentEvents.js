@@ -49,21 +49,29 @@ const StudentEvents = () => {
   };
 
   const handleRegister = async (eventId) => {
-    try {
-      await axios.post(`/api/student/register/${eventId}`);
-      alert("✅ Registration successful!");
-      fetchRegisteredEvents();
-    } catch (error) {
-      if (error.response?.status === 401 || error.response?.status === 403) {
-        sessionStorage.setItem("registerAfterLogin", eventId.toString());
-        window.location.href = "/login";
-      } else if (error.response?.status === 400) {
-        alert("ℹ You are already registered for this event.");
-      } else {
-        alert("❌ Registration failed.");
-      }
+  try {
+    await axios.post(`/api/student/register/${eventId}`);
+    alert("✅ Registration successful!");
+
+    // Update local state immediately
+    setRegisteredEvents((prev) => [...prev, eventId]);
+
+    // Optional: sync with server after a short delay
+    setTimeout(fetchRegisteredEvents, 1000);
+  } catch (error) {
+    if (error.response?.status === 401 || error.response?.status === 403) {
+      sessionStorage.setItem("registerAfterLogin", eventId.toString());
+      window.location.href = "/login";
+    } else if (error.response?.status === 400) {
+      alert("ℹ You are already registered for this event.");
+      // Optionally update UI anyway
+      setRegisteredEvents((prev) => [...prev, eventId]);
+    } else {
+      console.error("❌ Registration failed:", error);
+      alert("❌ Registration failed.");
     }
-  };
+  }
+};
 
   const today = new Date();
   const isPast = (date) => new Date(date) < today;

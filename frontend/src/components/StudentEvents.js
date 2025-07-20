@@ -12,25 +12,24 @@ const StudentEvents = () => {
   const [selectedEvent, setSelectedEvent] = useState(null);
 
   useEffect(() => {
-  const fetchData = async () => {
-    try {
-      await fetchRegisteredEvents();
-      await fetchEvents();
+    const fetchData = async () => {
+      try {
+        await fetchRegisteredEvents();
+        await fetchEvents();
 
-      const postLoginEventId = sessionStorage.getItem("registerAfterLogin");
-      if (postLoginEventId) {
-        handleRegister(Number(postLoginEventId));
-        sessionStorage.removeItem("registerAfterLogin");
+        const postLoginEventId = sessionStorage.getItem("registerAfterLogin");
+        if (postLoginEventId) {
+          handleRegister(Number(postLoginEventId));
+          sessionStorage.removeItem("registerAfterLogin");
+        }
+      } catch (err) {
+        console.error("User not logged in, redirecting to login.");
+        window.location.href = "/login";
       }
-    } catch (err) {
-      console.error("User not logged in, redirecting to login.");
-      window.location.href = "/login";
-    }
-  };
+    };
 
-  fetchData(); // ← You were missing this!
-}, []);
-
+    fetchData();
+  }, []);
 
   useEffect(() => {
     document.body.style.overflow = selectedEvent ? 'hidden' : 'auto';
@@ -207,4 +206,5 @@ const StudentEvents = () => {
     </div>
   );
 };
+
 export default StudentEvents;

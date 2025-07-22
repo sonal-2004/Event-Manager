@@ -19,7 +19,7 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 app.use(cors({
-  origin: 'https://event-manager-gold.vercel.app',
+  origin: 'https://event-announcer1.vercel.app',
   credentials: true
 }));
 
